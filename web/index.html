@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Matter QR Tool</title>
+  <style>
+    :root {
+      --bg: #f3efe7;
+      --surface: rgba(255, 252, 247, 0.88);
+      --surface-strong: #fffdf9;
+      --border: #d8cfbf;
+      --text: #27211b;
+      --muted: #6c6358;
+      --accent: #1f6a53;
+      --accent-strong: #154b3b;
+      --warning-bg: #fff5d8;
+      --warning-border: #e4cf8e;
+      --shadow: 0 18px 40px rgba(70, 53, 28, 0.08);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      padding: 32px 18px 56px;
+      font-family: "Avenir Next", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 38%),
+        linear-gradient(180deg, #f7f3ea 0%, var(--bg) 100%);
+    }
+
+    .page {
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.04em;
+    }
+
+    .lead {
+      margin: 0 0 22px;
+      max-width: 64ch;
+      color: var(--muted);
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    .box {
+      margin-bottom: 18px;
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 22px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(8px);
+    }
+
+    h3 {
+      margin: 0 0 12px;
+      font-size: 1.05rem;
+      letter-spacing: -0.02em;
+    }
+
+    input[type="file"],
+    input[type="text"],
+    input:not([type]) {
+      width: 100%;
+      margin: 6px 0;
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: var(--text);
+      font-size: 0.98rem;
+      transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
+    }
+
+    input:focus {
+      outline: none;
+      border-color: rgba(31, 106, 83, 0.55);
+      box-shadow: 0 0 0 4px rgba(31, 106, 83, 0.12);
+    }
+
+    button {
+      margin: 6px 0;
+      padding: 12px 18px;
+      border: 0;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: white;
+      font-weight: 700;
+      font-size: 0.96rem;
+      letter-spacing: 0.01em;
+      cursor: pointer;
+      box-shadow: 0 12px 24px rgba(31, 106, 83, 0.18);
+      transition: transform 140ms ease, box-shadow 140ms ease, opacity 140ms ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 16px 26px rgba(31, 106, 83, 0.22);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button:disabled {
+      opacity: 0.58;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .button-secondary {
+      background: rgba(255, 255, 255, 0.82);
+      color: var(--accent-strong);
+      border: 1px solid rgba(31, 106, 83, 0.18);
+      box-shadow: none;
+    }
+
+    .button-secondary:hover:enabled {
+      box-shadow: 0 10px 20px rgba(31, 106, 83, 0.12);
+    }
+
+    .button-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    pre {
+      margin: 10px 0 0;
+      padding: 14px;
+      min-height: 70px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: #f7f4ee;
+      color: var(--text);
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 0.95rem;
+    }
+
+    .options {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 10px 0 14px;
+    }
+
+    .options label {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--text);
+      font-size: 0.93rem;
+    }
+
+    .options input {
+      margin: 0;
+      padding: 0;
+      width: auto;
+      accent-color: var(--accent);
+    }
+
+    .pairing-card {
+      margin: 12px 0 14px;
+      padding: 14px 16px;
+      border: 1px solid rgba(31, 106, 83, 0.2);
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(31, 106, 83, 0.06), rgba(255, 255, 255, 0.7)),
+        var(--surface-strong);
+    }
+
+    .pairing-label {
+      margin: 0 0 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .pairing-value {
+      font-size: clamp(1.5rem, 4vw, 2.3rem);
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 10px;
+      margin: 0 0 14px;
+    }
+
+    .detail-card {
+      padding: 12px 14px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    .detail-key {
+      margin: 0 0 5px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .detail-value {
+      font-size: 1rem;
+      font-weight: 700;
+      color: var(--text);
+      word-break: break-word;
+    }
+
+    .detail-value a {
+      color: var(--accent-strong);
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+    }
+
+    .detail-help {
+      margin-top: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.4;
+    }
+
+    .details-note {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(31, 106, 83, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.55);
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .details-note a {
+      color: var(--accent-strong);
+      font-weight: 700;
+    }
+
+    .lookup-panel {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(31, 106, 83, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.48);
+    }
+
+    .lookup-help {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .lookup-status {
+      min-height: 1.4em;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.4;
+    }
+
+    .field-help {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+
+    .note {
+      margin: 10px 0 12px;
+      padding: 12px 14px;
+      border: 1px solid var(--warning-border);
+      border-radius: 16px;
+      background: var(--warning-bg);
+      color: #5b4b00;
+      line-height: 1.45;
+    }
+
+    .privacy {
+      margin: 0 0 18px;
+      padding: 12px 14px;
+      border-left: 4px solid rgba(31, 106, 83, 0.45);
+      border-radius: 0 14px 14px 0;
+      background: rgba(255, 255, 255, 0.46);
+      color: var(--muted);
+      line-height: 1.55;
+    }
+
+    #status {
+      min-height: 1.4em;
+      margin-top: 4px;
+      font-weight: 600;
+    }
+
+    #output {
+      margin-top: 14px;
+      padding: 14px;
+      border: 1px dashed var(--border);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.45);
+    }
+
+    svg {
+      display: block;
+      max-width: 100%;
+      height: auto;
+      margin: 0 auto;
+      border: 1px solid rgba(39, 33, 27, 0.12);
+      border-radius: 16px;
+      background: white;
+    }
+
+    @media (max-width: 640px) {
+      body { padding: 22px 14px 40px; }
+      .box { padding: 15px; border-radius: 18px; }
+      button { width: 100%; }
+      .button-row { display: block; }
+      .pairing-value { letter-spacing: 0.06em; }
+    }
+  </style>
+</head>
+<body>
+<main class="page">
+  <h1>Matter QR Tool</h1>
+  <p class="lead">Decode a Matter QR image, inspect the extracted payload, and download a generated SVG. The core decode flow stays local in your browser unless you explicitly run the optional CSA DCL lookup.</p>
+  <p class="privacy">Default use stays local in your browser: uploaded images, raw QR contents, setup PINs, and pairing codes are not sent anywhere. If you click the optional live CSA DCL lookup, only the extracted vendor and product IDs are sent through this site to the official CSA DCL service.</p>
+
+  <div class="box">
+    <h3>1. Upload Photo & Decode</h3>
+    <input type="file" id="file" accept="image/*" />
+    <p class="field-help">Upload a photo of the device's Matter QR code to extract the setup payload.</p>
+    <pre id="decoded" aria-live="polite"></pre>
+  </div>
+
+  <div class="box">
+    <h3>2. Generate Label</h3>
+    <input id="data" placeholder="MT:..." size="40"/>
+    <p class="field-help">The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.</p>
+    <div class="pairing-card">
+      <div class="pairing-label">Extracted Pairing Code</div>
+      <div id="manualDisplay" class="pairing-value">-</div>
+    </div>
+    <div class="lookup-panel">
+      <div class="button-row">
+        <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Lookup Official Vendor/Product Info</button>
+      </div>
+      <p class="lookup-help">Optional: query the official CSA Distributed Compliance Ledger for live vendor and model records. This sends only the extracted vendor and product IDs, not the setup PIN or full QR payload.</p>
+      <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
+    </div>
+    <div id="detailsGrid" class="details-grid"></div>
+    <div class="details-note">
+      Vendor and product names are shown from a built-in local lookup when known. If you opt into the live lookup, the page also queries the official CSA Distributed Compliance Ledger (DCL) for current vendor and model metadata. Discriminator is not a global product registry key, while commissioning flow and rendezvous methods come from fixed Matter definitions.
+      <br>
+      Reference: <a href="https://webui.dcl.csa-iot.org/" target="_blank" rel="noreferrer">CSA DCL Web UI</a>
+    </div>
+    <div class="note">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
+    <div class="options">
+      <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
+    </div>
+    <button id="downloadBtn" type="button">Download SVG</button>
+    <div id="status" aria-live="polite"></div>
+    <div id="output"></div>
+  </div>
+</main>
+
+<script type="module" src="app.js"></script>
+</body>
+</html>
