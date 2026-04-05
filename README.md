@@ -2,6 +2,10 @@
 
 A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting a clean SVG QR label.
 
+I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). Without the setup code, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
+
+If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
+
 ## What It Does
 
 - Upload a photo of a Matter QR code and decode it in the browser
@@ -87,4 +91,3 @@ docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 - The live DCL lookup works best when the app is served through the included Nginx config, because the proxy avoids browser CORS issues against the public DCL endpoints.
 - The generated SVG is intentionally minimal to work better with CAD and slicer workflows.
 - The Matter setup payload and pairing code are sensitive and should not be shared casually.
-- If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
