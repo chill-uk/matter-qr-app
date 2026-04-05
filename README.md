@@ -68,8 +68,23 @@ Then open:
 http://localhost:8080
 ```
 
+## Pull From GHCR
+
+Pull the latest published image:
+
+```bash
+docker pull ghcr.io/chill-uk/matter-qr-app:latest
+```
+
+Then run it:
+
+```bash
+docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
+```
+
 ## Notes
 
 - The live DCL lookup works best when the app is served through the included Nginx config, because the proxy avoids browser CORS issues against the public DCL endpoints.
 - The generated SVG is intentionally minimal to work better with CAD and slicer workflows.
 - The Matter setup payload and pairing code are sensitive and should not be shared casually.
+- If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
