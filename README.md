@@ -1,17 +1,23 @@
 # Matter QR Tool
 
-A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting a clean SVG QR label.
+A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting a clean SVG QR label for transplanting onto 3D-printed models.
 
-I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). Without the setup code, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
+## Why
 
+I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). The QR code is stored on the outer body and, without it, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
 
+The regenerated QR code will often look different from the original label. That is expected. Different QR generators can choose different mask patterns, module layouts, sizing, quiet-zone handling, and SVG rendering details while still encoding the exact same `MT:` payload. The important part is that the underlying Matter setup data is the same.
 
 ## What It Does
 
+### Decode
+
 - Upload a photo of a Matter QR code and decode it in the browser
-- If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
+
+### Inspect
+
 - Parse common Matter onboarding fields such as:
   - setup PIN
   - discriminator
@@ -20,7 +26,15 @@ I built this tool to help transplant Matter QR codes onto 3D printed models, for
   - commissioning flow
   - rendezvous methods
 - Optionally look up official vendor and product metadata from the CSA Distributed Compliance Ledger (DCL)
-- Export a QR-only SVG, including a compatibility mode for tools that struggle with SVG viewport sizing
+
+### Export
+
+- Export a QR-only SVG
+- Offer a compatibility mode for tools that struggle with SVG viewport sizing
+
+## If Decoding Fails
+
+If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app. You must use a 3rd party app to scan the QR code as the apple built in one will try and pair your device.
 
 ## Privacy
 
@@ -30,7 +44,7 @@ Default use is fully client-side:
 - decoded QR contents stay in the browser
 - setup PINs and pairing codes stay in the browser
 
-The only exception is the optional live DCL lookup button. When used, it sends only the extracted vendor ID and product ID through the app's same-origin proxy to the official CSA DCL service.
+The only exception is the optional live DCL lookup button. When used, it sends only the extracted vendor ID and product ID through the app's same-origin proxy to the official CSA DCL service. The full `MT:` payload is not sent during that lookup.
 
 ## Repo Structure
 
@@ -51,7 +65,7 @@ The only exception is the optional live DCL lookup button. When used, it sends o
 
 - `web/` contains the static browser app
 - `docker/nginx.conf` serves the site and proxies `/api/dcl/` to the official CSA DCL observer node
-- `docs/context.md` keeps the original project notes and scope
+- `docs/context.md` keeps the project notes and current scope
 
 ## Running With Docker
 
