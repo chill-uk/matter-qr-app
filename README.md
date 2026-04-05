@@ -4,11 +4,12 @@ A small client-side web app for decoding Matter QR codes, inspecting the extract
 
 I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). Without the setup code, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
 
-If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
+
 
 ## What It Does
 
 - Upload a photo of a Matter QR code and decode it in the browser
+- If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app.
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
 - Parse common Matter onboarding fields such as:
