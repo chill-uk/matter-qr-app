@@ -5,22 +5,37 @@ import {
 
 const reader = new BrowserMultiFormatReader();
 let finalSVG = "";
+let finalSTL = "";
 const fileInput = document.getElementById("file");
 const decodedOutput = document.getElementById("decoded");
 const dataInput = document.getElementById("data");
 const manualDisplay = document.getElementById("manualDisplay");
+const nerdModeInput = document.getElementById("nerdMode");
+const nerdSection = document.getElementById("nerdSection");
 const lookupBtn = document.getElementById("dclLookupBtn");
 const lookupStatus = document.getElementById("lookupStatus");
 const detailsGrid = document.getElementById("detailsGrid");
 const output = document.getElementById("output");
 const status = document.getElementById("status");
+const svgModeBtn = document.getElementById("svgModeBtn");
+const stlModeBtn = document.getElementById("stlModeBtn");
+const svgExportSection = document.getElementById("svgExportSection");
+const stlExportSection = document.getElementById("stlExportSection");
 const downloadBtn = document.getElementById("downloadBtn");
+const downloadStlBtn = document.getElementById("downloadStlBtn");
 const bambuSafeModeInput = document.getElementById("bambuSafeMode");
+const nozzleSizeInput = document.getElementById("nozzleSize");
+const layerHeightInput = document.getElementById("layerHeight");
+const moduleMultiplierInput = document.getElementById("moduleMultiplier");
+const raisedLayerCountInput = document.getElementById("raisedLayerCount");
+const mirrorStlInput = document.getElementById("mirrorStl");
+const stlSummary = document.getElementById("stlSummary");
 const MATTER_QR_PREFIX = "MT:";
 const MATTER_BASE38_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.";
 const STANDARD_COMMISSIONING_FLOW = 0;
 const MATTER_LONG_TO_SHORT_DISCRIMINATOR_SHIFT = 8;
 const DCL_PROXY_BASE = "/api/dcl";
+const QR_QUIET_ZONE_MODULES = 4;
 const KNOWN_VENDOR_NAMES = {
   4476: "IKEA of Sweden"
 };
@@ -35,9 +50,14 @@ let liveLookupData = null;
 let liveLookupPending = false;
 let vendorDirectoryPromise = null;
 const modelLookupCache = new Map();
+let exportMode = "stl";
 
 function formatSvgNumber(value) {
   return Number.parseFloat(value.toFixed(3)).toString();
+}
+
+function formatMillimeters(value) {
+  return `${Number.parseFloat(value.toFixed(2)).toString()} mm`;
 }
 
 function setStatus(message, isError = false) {
@@ -99,6 +119,21 @@ function updateLookupButtonState() {
     getActiveLookupData(currentPayload)
       ? "Refresh Official Vendor/Product Info"
       : "Lookup Official Vendor/Product Info";
+}
+
+function updateNerdModeUi() {
+  nerdSection.hidden = !nerdModeInput.checked;
+}
+
+function updateExportModeUi() {
+  const isSvgMode = exportMode === "svg";
+
+  svgModeBtn.classList.toggle("is-active", isSvgMode);
+  stlModeBtn.classList.toggle("is-active", !isSvgMode);
+  svgModeBtn.setAttribute("aria-selected", String(isSvgMode));
+  stlModeBtn.setAttribute("aria-selected", String(!isSvgMode));
+  svgExportSection.hidden = !isSvgMode;
+  stlExportSection.hidden = isSvgMode;
 }
 
 function formatCommissioningFlow(value) {
@@ -460,6 +495,43 @@ async function lookupOfficialMatterInfo() {
 function clearGeneratedOutput() {
   output.innerHTML = "";
   finalSVG = "";
+  finalSTL = "";
+}
+
+function updateStlSummary() {
+  const { stl } = getExportOptions();
+  const summaryParts = [
+    `Each QR square will be <strong>${formatMillimeters(stl.moduleSizeMm)}</strong>.`,
+    `The QR will be <strong>${formatMillimeters(stl.qrHeightMm)}</strong> tall.`
+  ];
+  const data = dataInput.value.trim();
+
+  if (data) {
+    try {
+      const overallSize = getQrCanvasSize(data, stl.moduleSizeMm);
+      summaryParts.push(`The full QR will be about <strong>${formatMillimeters(overallSize)} x ${formatMillimeters(overallSize)}</strong>.`);
+    } catch {
+      // Ignore invalid data here. The main generator will surface a clearer error.
+    }
+  }
+
+  summaryParts.push(
+    stl.mirror
+      ? "Mirroring is enabled for underside printing."
+      : "Mirroring is currently off."
+  );
+
+  stlSummary.innerHTML = summaryParts.join(" ");
+}
+
+function parsePositiveNumber(value, fallback) {
+  const parsedValue = Number.parseFloat(value);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+}
+
+function parsePositiveInteger(value, fallback) {
+  const parsedValue = Number.parseInt(value, 10);
+  return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
 }
 
 function decimalStringWithPadding(number, length) {
@@ -669,8 +741,23 @@ function syncManualCodeFromData({ force = false } = {}) {
 }
 
 function getExportOptions() {
+  const nozzleSize = parsePositiveNumber(nozzleSizeInput.value, 0.4);
+  const layerHeight = parsePositiveNumber(layerHeightInput.value, 0.2);
+  const moduleMultiplier = parsePositiveInteger(moduleMultiplierInput.value, 4);
+  const raisedLayerCount = parsePositiveInteger(raisedLayerCountInput.value, 2);
+
   return {
-    bambuSafeMode: bambuSafeModeInput.checked
+    exportMode,
+    bambuSafeMode: bambuSafeModeInput.checked,
+    stl: {
+      nozzleSize,
+      layerHeight,
+      moduleMultiplier,
+      raisedLayerCount,
+      mirror: mirrorStlInput.checked,
+      moduleSizeMm: nozzleSize * moduleMultiplier,
+      qrHeightMm: layerHeight * raisedLayerCount
+    }
   };
 }
 
@@ -704,6 +791,7 @@ fileInput.addEventListener("change", async (e) => {
 
 dataInput.addEventListener("input", () => {
   syncManualCodeFromData();
+  updateStlSummary();
   if (!dataInput.value.trim()) {
     clearGeneratedOutput();
     return;
@@ -716,11 +804,18 @@ const matterLogo = `
 <path d="M152 128.5c21.5 17.5 47.1 29.2 74.4 34.2V17.1L256.1 0l29.6 17.1v145.5c27.3-4.9 52.9-16.7 74.5-34.2l53.8 31.1c-87.6 86.5-228.5 86.5-316.1 0zM217.5 500c31.2-119.1-39.4-241.1-158.2-273.5v62.3c25.9 9.9 48.9 26.2 66.8 47.4L0 408.8V443l29.7 17 126.1-72.7c9.4 26.1 12 54.2 7.6 81.4l54.1 31.4Zm235.3-273.5C334 259 263.6 381 294.8 500l54-31.2c-4.4-27.4-1.7-55.4 7.6-81.4l126 72.6 29.6-17.1v-34.2L385.9 336c17.9-21.2 40.9-37.5 66.8-47.4v-62.2Z" fill="black"/>
 `;
 
-function renderQRModules(data, x, y, size) {
+function getQrDefinition(data) {
   const qr = QRCode.create(data, { errorCorrectionLevel: "M" });
-  const moduleCount = qr.modules.size;
-  const moduleData = qr.modules.data;
-  const quietZoneModules = 4;
+
+  return {
+    moduleCount: qr.modules.size,
+    moduleData: qr.modules.data,
+    quietZoneModules: QR_QUIET_ZONE_MODULES
+  };
+}
+
+function renderQRModules(data, x, y, size) {
+  const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const totalModules = moduleCount + quietZoneModules * 2;
   const moduleSize = size / totalModules;
   const pathCommands = [];
@@ -753,10 +848,7 @@ function renderQRModules(data, x, y, size) {
 }
 
 function renderBambuSafeQR(data, x, y, moduleSize = 4) {
-  const qr = QRCode.create(data, { errorCorrectionLevel: "M" });
-  const moduleCount = qr.modules.size;
-  const moduleData = qr.modules.data;
-  const quietZoneModules = 4;
+  const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const rects = [];
 
   for (let row = 0; row < moduleCount; row += 1) {
@@ -790,9 +882,8 @@ function buildBambuSafeSvg(data, includeSizingMetadata) {
 }
 
 function getQrCanvasSize(data, moduleSize = 4) {
-  const qr = QRCode.create(data, { errorCorrectionLevel: "M" });
-  const quietZoneModules = 4;
-  return (qr.modules.size + (quietZoneModules * 2)) * moduleSize;
+  const { moduleCount, quietZoneModules } = getQrDefinition(data);
+  return (moduleCount + (quietZoneModules * 2)) * moduleSize;
 }
 
 function buildNormalQrSvg(data, includeSizingMetadata) {
@@ -805,6 +896,84 @@ function buildNormalQrSvg(data, includeSizingMetadata) {
     svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size)}</svg>`,
     size
   };
+}
+
+function formatStlNumber(value) {
+  return Number.parseFloat(value.toFixed(4)).toString();
+}
+
+function buildStlFacet(normal, vertices) {
+  const formatVertex = ([x, y, z]) =>
+    `      vertex ${formatStlNumber(x)} ${formatStlNumber(y)} ${formatStlNumber(z)}`;
+
+  return [
+    `  facet normal ${normal.join(" ")}`,
+    "    outer loop",
+    ...vertices.map(formatVertex),
+    "    endloop",
+    "  endfacet"
+  ].join("\n");
+}
+
+function appendPrismFacets(facets, x, y, width, height, baseZ, topZ) {
+  const p000 = [x, y, baseZ];
+  const p100 = [x + width, y, baseZ];
+  const p110 = [x + width, y + height, baseZ];
+  const p010 = [x, y + height, baseZ];
+  const p001 = [x, y, topZ];
+  const p101 = [x + width, y, topZ];
+  const p111 = [x + width, y + height, topZ];
+  const p011 = [x, y + height, topZ];
+
+  facets.push(buildStlFacet(["0", "0", "-1"], [p000, p110, p100]));
+  facets.push(buildStlFacet(["0", "0", "-1"], [p000, p010, p110]));
+  facets.push(buildStlFacet(["0", "0", "1"], [p001, p101, p111]));
+  facets.push(buildStlFacet(["0", "0", "1"], [p001, p111, p011]));
+  facets.push(buildStlFacet(["0", "-1", "0"], [p000, p100, p101]));
+  facets.push(buildStlFacet(["0", "-1", "0"], [p000, p101, p001]));
+  facets.push(buildStlFacet(["1", "0", "0"], [p100, p110, p111]));
+  facets.push(buildStlFacet(["1", "0", "0"], [p100, p111, p101]));
+  facets.push(buildStlFacet(["0", "1", "0"], [p110, p010, p011]));
+  facets.push(buildStlFacet(["0", "1", "0"], [p110, p011, p111]));
+  facets.push(buildStlFacet(["-1", "0", "0"], [p010, p000, p001]));
+  facets.push(buildStlFacet(["-1", "0", "0"], [p010, p001, p011]));
+}
+
+function buildQrStl(data, settings) {
+  const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const moduleSizeMm = settings.moduleSizeMm;
+  const facets = [];
+  const xOffset = settings.mirror
+    ? (moduleCount + (quietZoneModules * 2)) * moduleSizeMm
+    : 0;
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (!moduleData[row * moduleCount + col]) continue;
+
+      const rawX = (col + quietZoneModules) * moduleSizeMm;
+      const y = (row + quietZoneModules) * moduleSizeMm;
+      const x = settings.mirror
+        ? xOffset - rawX - moduleSizeMm
+        : rawX;
+
+      appendPrismFacets(
+        facets,
+        x,
+        y,
+        moduleSizeMm,
+        moduleSizeMm,
+        0,
+        settings.qrHeightMm
+      );
+    }
+  }
+
+  return [
+    "solid matter_qr",
+    ...facets,
+    "endsolid matter_qr"
+  ].join("\n");
 }
 
 function roundedRectPath(x, y, width, height, radius, reverse = false) {
@@ -908,7 +1077,8 @@ function renderManualCode(manual, centerX, baselineY, availableWidth) {
 
 async function generateLabel() {
   const data = dataInput.value.trim();
-  const { bambuSafeMode } = getExportOptions();
+  const { exportMode: selectedExportMode, bambuSafeMode, stl } = getExportOptions();
+  updateStlSummary();
 
   if (!data) {
     setStatus("Enter or decode a Matter QR payload first.", true);
@@ -918,6 +1088,14 @@ async function generateLabel() {
 
   try {
     syncManualCodeFromData({ force: true });
+    finalSTL = buildQrStl(data, stl);
+
+    if (selectedExportMode === "stl") {
+      const previewNormalSvg = buildNormalQrSvg(data, true);
+      finalSVG = "";
+      output.innerHTML = previewNormalSvg.svg;
+      return;
+    }
 
     if (bambuSafeMode) {
       const downloadSafeSvg = buildBambuSafeSvg(data, false);
@@ -955,8 +1133,42 @@ function downloadLabel() {
   setStatus("SVG downloaded.");
 }
 
+function downloadStl() {
+  if (!finalSTL) {
+    setStatus("Generate a label before downloading the STL.", true);
+    return;
+  }
+
+  const blob = new Blob([finalSTL], { type: "model/stl" });
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "matter-label.stl";
+  a.click();
+
+  URL.revokeObjectURL(url);
+  setStatus("STL downloaded.");
+}
+
 lookupBtn.addEventListener("click", lookupOfficialMatterInfo);
+nerdModeInput.addEventListener("change", updateNerdModeUi);
+svgModeBtn.addEventListener("click", () => {
+  exportMode = "svg";
+  updateExportModeUi();
+  if (dataInput.value.trim()) {
+    generateLabel();
+  }
+});
+stlModeBtn.addEventListener("click", () => {
+  exportMode = "stl";
+  updateExportModeUi();
+  if (dataInput.value.trim()) {
+    generateLabel();
+  }
+});
 downloadBtn.addEventListener("click", downloadLabel);
+downloadStlBtn.addEventListener("click", downloadStl);
 
 for (const input of [bambuSafeModeInput]) {
   input.addEventListener("change", () => {
@@ -968,4 +1180,22 @@ for (const input of [bambuSafeModeInput]) {
   });
 }
 
+for (const input of [
+  nozzleSizeInput,
+  layerHeightInput,
+  moduleMultiplierInput,
+  raisedLayerCountInput,
+  mirrorStlInput
+]) {
+  input.addEventListener("input", () => {
+    updateStlSummary();
+    if (dataInput.value.trim()) {
+      generateLabel();
+    }
+  });
+}
+
 updateLookupButtonState();
+updateExportModeUi();
+updateNerdModeUi();
+updateStlSummary();

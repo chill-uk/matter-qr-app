@@ -44,7 +44,6 @@
 
     .lead {
       margin: 0 0 22px;
-      max-width: 64ch;
       color: var(--muted);
       font-size: 1rem;
       line-height: 1.5;
@@ -133,6 +132,35 @@
       gap: 12px;
       flex-wrap: wrap;
       align-items: center;
+    }
+
+    .mode-switch {
+      display: inline-flex;
+      gap: 8px;
+      padding: 6px;
+      margin: 0 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.5);
+    }
+
+    .mode-button {
+      margin: 0;
+      padding: 10px 16px;
+      box-shadow: none;
+      background: transparent;
+      color: var(--muted);
+    }
+
+    .mode-button:hover:enabled {
+      box-shadow: none;
+      transform: none;
+    }
+
+    .mode-button.is-active {
+      background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
+      color: white;
+      box-shadow: 0 10px 18px rgba(31, 106, 83, 0.16);
     }
 
     pre {
@@ -243,22 +271,6 @@
       line-height: 1.4;
     }
 
-    .details-note {
-      margin: 0 0 14px;
-      padding: 12px 14px;
-      border: 1px solid rgba(31, 106, 83, 0.16);
-      border-radius: 16px;
-      background: rgba(255, 255, 255, 0.55);
-      color: var(--muted);
-      font-size: 0.9rem;
-      line-height: 1.5;
-    }
-
-    .details-note a {
-      color: var(--accent-strong);
-      font-weight: 700;
-    }
-
     .lookup-panel {
       margin: 0 0 14px;
       padding: 12px 14px;
@@ -287,6 +299,106 @@
       color: var(--muted);
       font-size: 0.92rem;
       line-height: 1.45;
+    }
+
+    .print-grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin: 0 0 14px;
+      width: fit-content;
+      max-width: 100%;
+    }
+
+    .settings-group + .settings-group {
+      margin-top: 8px;
+    }
+
+    .settings-group {
+      margin-top: 14px;
+    }
+
+    .settings-group h4 {
+      margin: 0 0 10px;
+      font-size: 0.94rem;
+      letter-spacing: -0.01em;
+    }
+
+    .settings-help {
+      margin: 0 0 10px;
+      color: var(--muted);
+      font-size: 0.88rem;
+      line-height: 1.45;
+    }
+
+    .print-grid label {
+      display: grid;
+      grid-template-columns: max-content max-content;
+      align-items: center;
+      gap: 10px;
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .print-grid input {
+      margin-top: 0;
+      width: 100%;
+    }
+
+    .print-grid input[type="number"] {
+      width: 7.5rem;
+    }
+
+    .print-grid input[type="checkbox"] {
+      width: auto;
+      justify-self: start;
+    }
+
+    .setting-text {
+      display: block;
+    }
+
+    .workflow-list {
+      margin: 10px 0 0 18px;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+      padding: 0;
+    }
+
+    .workflow-list li + li {
+      margin-top: 6px;
+    }
+
+    .stl-summary {
+      margin: 0 0 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(31, 106, 83, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.58);
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .stl-summary strong {
+      color: var(--text);
+    }
+
+    .instruction-card {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid rgba(31, 106, 83, 0.16);
+      border-radius: 16px;
+      background: rgba(255, 255, 255, 0.58);
+    }
+
+    .instruction-card h4 {
+      margin: 0 0 10px;
+      font-size: 0.94rem;
+      letter-spacing: -0.01em;
     }
 
     .note {
@@ -321,6 +433,21 @@
       border: 1px dashed var(--border);
       border-radius: 18px;
       background: rgba(255, 255, 255, 0.45);
+      max-width: 420px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .export-section[hidden] {
+      display: none;
+    }
+
+    .nerd-toggle {
+      margin: 0 0 14px;
+    }
+
+    .nerd-section[hidden] {
+      display: none;
     }
 
     svg {
@@ -339,30 +466,39 @@
       button { width: 100%; }
       .button-row { display: block; }
       .pairing-value { letter-spacing: 0.06em; }
+      .print-grid label {
+        grid-template-columns: 1fr;
+        gap: 6px;
+      }
     }
   </style>
 </head>
 <body>
 <main class="page">
   <h1>Matter QR Tool</h1>
-  <p class="lead">Decode a Matter QR image, inspect the extracted payload, and download a generated SVG. The core decode flow stays local in your browser unless you explicitly run the optional CSA DCL lookup.</p>
-  <p class="privacy">Default use stays local in your browser: uploaded images, raw QR contents, setup PINs, and pairing codes are not sent anywhere. If you click the optional live CSA DCL lookup, only the extracted vendor and product IDs are sent through this site to the official CSA DCL service.</p>
+  <p class="lead">Decode a Matter QR image, inspect the extracted payload, and generate an SVG or STL export.</p>
+  <p class="privacy">Everything stays in your browser by default. Only the optional live CSA DCL lookup sends data, and it sends just the extracted vendor and product IDs.</p>
 
   <div class="box">
     <h3>1. Upload Photo & Decode</h3>
     <input type="file" id="file" accept="image/*" />
     <p class="field-help">Upload a photo of the device's Matter QR code to extract the setup payload.</p>
+    <p class="field-help">If photo decoding does not find a QR code, you can scan the label with a third-party QR app, copy the <code>MT:</code> value, and paste it into the field in step 2.</p>
     <pre id="decoded" aria-live="polite"></pre>
   </div>
 
   <div class="box">
-    <h3>2. Generate Label</h3>
+    <h3>2. Review Payload</h3>
     <input id="data" placeholder="MT:..." size="40"/>
     <p class="field-help">The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.</p>
     <div class="pairing-card">
       <div class="pairing-label">Extracted Pairing Code</div>
       <div id="manualDisplay" class="pairing-value">-</div>
     </div>
+    <div class="options nerd-toggle">
+      <label><input type="checkbox" id="nerdMode" /> Nerd mode: show Matter details and live lookup</label>
+    </div>
+    <div id="nerdSection" class="nerd-section" hidden>
     <div class="lookup-panel">
       <div class="button-row">
         <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Lookup Official Vendor/Product Info</button>
@@ -371,16 +507,74 @@
       <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
     </div>
     <div id="detailsGrid" class="details-grid"></div>
-    <div class="details-note">
-      Vendor and product names are shown from a built-in local lookup when known. If you opt into the live lookup, the page also queries the official CSA Distributed Compliance Ledger (DCL) for current vendor and model metadata. Discriminator is not a global product registry key, while commissioning flow and rendezvous methods come from fixed Matter definitions.
-      <br>
-      Reference: <a href="https://webui.dcl.csa-iot.org/" target="_blank" rel="noreferrer">CSA DCL Web UI</a>
     </div>
     <div class="note">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
-    <div class="options">
-      <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
+  </div>
+
+  <div class="box">
+    <h3>3. Export</h3>
+    <div class="mode-switch" role="tablist" aria-label="Export mode">
+      <button id="svgModeBtn" class="mode-button" type="button" role="tab" aria-selected="false">SVG Export</button>
+      <button id="stlModeBtn" class="mode-button is-active" type="button" role="tab" aria-selected="true">STL Export</button>
     </div>
-    <button id="downloadBtn" type="button">Download SVG</button>
+    <div id="svgExportSection" class="export-section" hidden>
+      <div class="options">
+        <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
+      </div>
+      <div class="button-row">
+        <button id="downloadBtn" type="button">Download SVG</button>
+      </div>
+    </div>
+    <div id="stlExportSection" class="export-section lookup-panel">
+      <h4>STL Settings</h4>
+      <p class="lookup-help">Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.</p>
+      <div class="settings-group">
+        <h4>Your Printer</h4>
+        <div class="print-grid">
+          <label>
+            <span class="setting-text">Nozzle Size (mm)</span>
+            <input id="nozzleSize" type="number" min="0.1" step="0.05" value="0.4" />
+          </label>
+          <label>
+            <span class="setting-text">Layer Height (mm)</span>
+            <input id="layerHeight" type="number" min="0.05" step="0.05" value="0.2" />
+          </label>
+        </div>
+      </div>
+      <div class="settings-group">
+        <h4>QR Code Output</h4>
+        <p class="settings-help">These control how chunky the QR blocks are and whether the STL should be mirrored for underside use.</p>
+        <div class="print-grid">
+          <label>
+            <span class="setting-text">QR Square Width (x nozzle)</span>
+            <input id="moduleMultiplier" type="number" min="2" step="1" value="4" />
+          </label>
+          <label>
+            <span class="setting-text">QR Height (layers)</span>
+            <input id="raisedLayerCount" type="number" min="1" step="1" value="2" />
+          </label>
+          <label>
+            <span class="setting-text">Mirror For Underside Prints</span>
+            <input id="mirrorStl" type="checkbox" />
+          </label>
+        </div>
+      </div>
+      <div id="stlSummary" class="stl-summary" aria-live="polite"></div>
+      <p class="lookup-help">A default of 4x nozzle width per QR square is a good starting point for reliable prints.</p>
+      <div class="instruction-card">
+        <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
+        <ul class="workflow-list">
+          <li>Right-click the part you want to modify.</li>
+          <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR-code STL.</li>
+          <li>Position the modifier where you want the QR.</li>
+          <li>Change the filament color so it shows up on the finished print.</li>
+          <li>If the final visible QR would end up reversed, enable the mirror option before exporting.</li>
+        </ul>
+      </div>
+      <div class="button-row">
+      <button id="downloadStlBtn" class="button-secondary" type="button">Download STL</button>
+      </div>
+    </div>
     <div id="status" aria-live="polite"></div>
     <div id="output"></div>
   </div>

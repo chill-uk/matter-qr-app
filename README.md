@@ -1,12 +1,12 @@
 # Matter QR Tool
 
-A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting a clean SVG QR label for transplanting onto 3D-printed models.
+A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting an SVG / STL QR label for transplanting onto 3D-printed models.
 
 ## Why
 
 I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). The QR code is stored on the outer body and, without it, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
 
-The regenerated QR code will often look different from the original label. That is expected. Different QR generators can choose different mask patterns, module layouts, sizing, quiet-zone handling, and SVG rendering details while still encoding the exact same `MT:` payload. The important part is that the underlying Matter setup data is the same.
+Note: The regenerated QR code will often look different from the original label. Different QR generators choose different mask patterns, module layouts, sizing, quiet-zone handling, but it will still encode the exact same `MT:` payload.
 
 ## What It Does
 
@@ -15,6 +15,10 @@ The regenerated QR code will often look different from the original label. That 
 - Upload a photo of a Matter QR code and decode it in the browser
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
+
+#### If Decoding Fails
+
+If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app. You must use a 3rd party app to scan the QR code as the apple built in one will try and pair your device.
 
 ### Inspect
 
@@ -29,12 +33,17 @@ The regenerated QR code will often look different from the original label. That 
 
 ### Export
 
-- Export a QR-only SVG
-- Offer a compatibility mode for tools that struggle with SVG viewport sizing
+- Export an SVG
+- Export an STL
 
-## If Decoding Fails
+## STL Instructions for Bambu Lab / OrcaSlicer
 
-If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app. You must use a 3rd party app to scan the QR code as the apple built in one will try and pair your device.
+- Generate and download the QR code STL
+- Right-click the part you want to modify.
+- Choose Add modifier, then Load, and select the QR-code STL.
+- Position the modifier where you want the QR.
+- Change the filament color so it shows up on the finished print.
+- If the final visible QR would end up reversed, enable the mirror option before exporting.
 
 ## Privacy
 
@@ -100,9 +109,3 @@ Then run it:
 ```bash
 docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 ```
-
-## Notes
-
-- The live DCL lookup works best when the app is served through the included Nginx config, because the proxy avoids browser CORS issues against the public DCL endpoints.
-- The generated SVG is intentionally minimal to work better with CAD and slicer workflows.
-- The Matter setup payload and pairing code are sensitive and should not be shared casually.
