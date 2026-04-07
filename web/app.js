@@ -392,6 +392,37 @@ async function fetchDclVendorDirectory() {
   return vendorDirectoryPromise;
 }
 
+async function fetchDclVendorRecord(vendorId) {
+  try {
+    const response = await fetchJson(`${DCL_PROXY_BASE}/vendorinfo/vendors/${vendorId}`);
+
+    if (Array.isArray(response?.vendorInfo)) {
+      return response.vendorInfo[0] ?? null;
+    }
+
+    if (response?.vendorInfo) {
+      return response.vendorInfo;
+    }
+
+    if (response?.vendor) {
+      return response.vendor;
+    }
+
+    return null;
+  } catch (error) {
+    if (error.status === 404) {
+      return null;
+    }
+
+    if (error.status === 501 || error.status === 405) {
+      const vendors = await fetchDclVendorDirectory();
+      return vendors.get(vendorId) || null;
+    }
+
+    throw error;
+  }
+}
+
 async function fetchDclModelRecord(vendorId, productId) {
   const cacheKey = `${vendorId}:${productId}`;
 
@@ -429,7 +460,7 @@ async function lookupOfficialMatterInfo() {
 
   try {
     const [vendorResult, modelResult] = await Promise.allSettled([
-      fetchDclVendorDirectory(),
+      fetchDclVendorRecord(requestedPayload.vendorId),
       fetchDclModelRecord(requestedPayload.vendorId, requestedPayload.productId)
     ]);
 
@@ -437,9 +468,7 @@ async function lookupOfficialMatterInfo() {
       return;
     }
 
-    const vendorRecord = vendorResult.status === "fulfilled"
-      ? (vendorResult.value.get(requestedPayload.vendorId) || null)
-      : null;
+    const vendorRecord = vendorResult.status === "fulfilled" ? vendorResult.value : null;
     const modelRecord = modelResult.status === "fulfilled"
       ? modelResult.value
       : null;
@@ -503,7 +532,7 @@ function updateStlSummary() {
     `Each QR square will be <strong>${formatMillimeters(stl.moduleSizeMm)}</strong>.`,
     `The QR will be <strong>${formatMillimeters(stl.qrHeightMm)}</strong> tall.`
   ];
-  const data = dataInput.value.trim();
+  const data = getNormalizedMatterQrText(dataInput.value);
 
   if (data) {
     try {
@@ -535,6 +564,11 @@ function parsePositiveInteger(value, fallback) {
 
 function decimalStringWithPadding(number, length) {
   return String(number).padStart(length, "0");
+}
+
+function getNormalizedMatterQrText(text) {
+  const payload = extractMatterQrPayload(text);
+  return payload ? `${MATTER_QR_PREFIX}${payload}` : "";
 }
 
 function extractMatterQrPayload(text) {
@@ -706,7 +740,7 @@ function generateManualPairingCode(text) {
 }
 
 function syncManualCodeFromData({ force = false } = {}) {
-  const data = dataInput.value.trim();
+  const data = getNormalizedMatterQrText(dataInput.value);
   const previousLookupKey = getPayloadLookupKey(currentPayload);
 
   try {
@@ -969,26 +1003,28 @@ function buildQrStl(data, settings) {
 }
 
 async function generateLabel() {
-  const data = dataInput.value.trim();
+  const data = getNormalizedMatterQrText(dataInput.value);
   const { exportMode: selectedExportMode, bambuSafeMode, stl } = getExportOptions();
   updateStlSummary();
 
   if (!data) {
-    setStatus("Enter or decode a Matter QR payload first.", true);
+    setStatus("Enter or decode a valid Matter QR payload first.", true);
     clearGeneratedOutput();
     return;
   }
 
   try {
     syncManualCodeFromData({ force: true });
-    finalSTL = buildQrStl(data, stl);
 
     if (selectedExportMode === "stl") {
+      finalSTL = buildQrStl(data, stl);
       const previewNormalSvg = buildNormalQrSvg(data, true);
       finalSVG = "";
       output.innerHTML = previewNormalSvg.svg;
       return;
     }
+
+    finalSTL = "";
 
     if (bambuSafeMode) {
       const downloadSafeSvg = buildBambuSafeSvg(data, false);

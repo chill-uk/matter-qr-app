@@ -53,7 +53,7 @@ Default use is fully client-side:
 - decoded QR contents stay in the browser
 - setup PINs and pairing codes stay in the browser
 
-The only exception is the optional live DCL lookup button. When used, it sends only the extracted vendor ID and product ID through the app's same-origin proxy to the official CSA DCL service. The full `MT:` payload is not sent during that lookup.
+The only exception is the optional live DCL lookup button. When used, it requests the vendor and product records for the extracted IDs through the app's same-origin proxy to the official CSA DCL service. The full `MT:` payload is not sent during that lookup, though some CSA deployments may require a public vendor-directory fallback for vendor enrichment.
 
 ## Repo Structure
 

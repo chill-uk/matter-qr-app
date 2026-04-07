@@ -46,7 +46,7 @@ Default use is client-side only:
 
 Optional behavior:
 
-- if the user clicks the live CSA DCL lookup button, only the extracted vendor ID and product ID are sent through the app's same-origin proxy to the official CSA DCL service
+- if the user clicks the live CSA DCL lookup button, the app requests the matching vendor and product records for the extracted IDs through the same-origin proxy, with a vendor-directory fallback only when the upstream CSA deployment does not expose a single-vendor endpoint
 
 ## Tech Stack
 

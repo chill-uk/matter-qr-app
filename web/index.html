@@ -491,7 +491,7 @@
 <main class="page">
   <h1>Matter QR Tool</h1>
   <p class="lead">Decode a Matter QR image, inspect the extracted payload, and generate an SVG or STL export.</p>
-  <p class="privacy">Everything stays in your browser by default. Only the optional live CSA DCL lookup sends data, and it sends just the extracted vendor and product IDs.</p>
+  <p class="privacy">Everything stays in your browser by default. The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs, although some CSA deployments may require a public vendor-directory fallback.</p>
 
   <div class="box">
     <h3>1. Upload Photo & Decode</h3>
@@ -516,7 +516,7 @@
       <div class="button-row">
         <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Lookup Official Vendor/Product Info</button>
       </div>
-      <p class="lookup-help">Optional: query the official CSA Distributed Compliance Ledger for live vendor and model records. This sends only the extracted vendor and product IDs, not the setup PIN or full QR payload.</p>
+      <p class="lookup-help">Optional: query the official CSA Distributed Compliance Ledger for live vendor and model records. This requests the matching vendor and product records for the extracted IDs, not the setup PIN or full QR payload.</p>
       <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
     </div>
     <div id="detailsGrid" class="details-grid"></div>
