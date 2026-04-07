@@ -114,4 +114,4 @@ docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 
 If this tool saved you some time, you can support it on Ko-fi:
 
-- [ko-fi.com/christopherhill75967](https://ko-fi.com/christopherhill75967)
+- [ko-fi.com/chill_uk](https://ko-fi.com/chill_uk)
