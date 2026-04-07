@@ -109,3 +109,9 @@ Then run it:
 ```bash
 docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 ```
+
+## Support
+
+If this tool saved you some time, you can support it on Ko-fi:
+
+- [ko-fi.com/christopherhill75967](https://ko-fi.com/christopherhill75967)

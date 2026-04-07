@@ -7,7 +7,6 @@ const reader = new BrowserMultiFormatReader();
 let finalSVG = "";
 let finalSTL = "";
 const fileInput = document.getElementById("file");
-const decodedOutput = document.getElementById("decoded");
 const dataInput = document.getElementById("data");
 const manualDisplay = document.getElementById("manualDisplay");
 const nerdModeInput = document.getElementById("nerdMode");
@@ -772,7 +771,6 @@ fileInput.addEventListener("change", async (e) => {
     const result = await reader.decodeFromImageUrl(url);
     const text = result.getText();
 
-    decodedOutput.textContent = text;
     dataInput.value = text;
     syncManualCodeFromData({ force: true });
     generateLabel();
@@ -782,7 +780,6 @@ fileInput.addEventListener("change", async (e) => {
         : "QR code decoded. Ready to generate."
     );
   } catch (error) {
-    decodedOutput.textContent = "No QR code found";
     setStatus(`Could not decode the uploaded image: ${error.message}`, true);
   } finally {
     URL.revokeObjectURL(url);
@@ -798,11 +795,6 @@ dataInput.addEventListener("input", () => {
   }
   generateLabel();
 });
-
-const matterLogoWidth = 512;
-const matterLogo = `
-<path d="M152 128.5c21.5 17.5 47.1 29.2 74.4 34.2V17.1L256.1 0l29.6 17.1v145.5c27.3-4.9 52.9-16.7 74.5-34.2l53.8 31.1c-87.6 86.5-228.5 86.5-316.1 0zM217.5 500c31.2-119.1-39.4-241.1-158.2-273.5v62.3c25.9 9.9 48.9 26.2 66.8 47.4L0 408.8V443l29.7 17 126.1-72.7c9.4 26.1 12 54.2 7.6 81.4l54.1 31.4Zm235.3-273.5C334 259 263.6 381 294.8 500l54-31.2c-4.4-27.4-1.7-55.4 7.6-81.4l126 72.6 29.6-17.1v-34.2L385.9 336c17.9-21.2 40.9-37.5 66.8-47.4v-62.2Z" fill="black"/>
-`;
 
 function getQrDefinition(data) {
   const qr = QRCode.create(data, { errorCorrectionLevel: "M" });
@@ -974,105 +966,6 @@ function buildQrStl(data, settings) {
     ...facets,
     "endsolid matter_qr"
   ].join("\n");
-}
-
-function roundedRectPath(x, y, width, height, radius, reverse = false) {
-  const right = x + width;
-  const bottom = y + height;
-  const r = Math.max(0, Math.min(radius, width / 2, height / 2));
-
-  if (reverse) {
-    return [
-      `M ${x + r} ${y}`,
-      `H ${right - r}`,
-      `A ${r} ${r} 0 0 0 ${right} ${y + r}`,
-      `V ${bottom - r}`,
-      `A ${r} ${r} 0 0 0 ${right - r} ${bottom}`,
-      `H ${x + r}`,
-      `A ${r} ${r} 0 0 0 ${x} ${bottom - r}`,
-      `V ${y + r}`,
-      `A ${r} ${r} 0 0 0 ${x + r} ${y}`,
-      "Z"
-    ].join(" ");
-  }
-
-  return [
-    `M ${x + r} ${y}`,
-    `H ${right - r}`,
-    `A ${r} ${r} 0 0 1 ${right} ${y + r}`,
-    `V ${bottom - r}`,
-    `A ${r} ${r} 0 0 1 ${right - r} ${bottom}`,
-    `H ${x + r}`,
-    `A ${r} ${r} 0 0 1 ${x} ${bottom - r}`,
-    `V ${y + r}`,
-    `A ${r} ${r} 0 0 1 ${x + r} ${y}`,
-    "Z"
-  ].join(" ");
-}
-
-function renderRoundedFrame(x, y, size, radius, thickness) {
-  const innerInset = thickness;
-  const outerPath = roundedRectPath(x, y, size, size, radius);
-  const innerPath = roundedRectPath(
-    x + innerInset,
-    y + innerInset,
-    size - (innerInset * 2),
-    size - (innerInset * 2),
-    Math.max(radius - innerInset, 0),
-    true
-  );
-
-  return `<path d="${outerPath} ${innerPath}" fill="black" fill-rule="evenodd"/>`;
-}
-
-function renderManualCode(manual, centerX, baselineY, availableWidth) {
-  if (!manual) return "";
-
-  const segmentMap = {
-    "0": ["a", "b", "c", "d", "e", "f"],
-    "1": ["b", "c"],
-    "2": ["a", "b", "g", "e", "d"],
-    "3": ["a", "b", "g", "c", "d"],
-    "4": ["f", "g", "b", "c"],
-    "5": ["a", "f", "g", "c", "d"],
-    "6": ["a", "f", "g", "e", "c", "d"],
-    "7": ["a", "b", "c"],
-    "8": ["a", "b", "c", "d", "e", "f", "g"],
-    "9": ["a", "b", "c", "d", "f", "g"]
-  };
-  const spacing = 2;
-  const digitWidth = Math.min(12, (availableWidth - ((manual.length - 1) * spacing)) / manual.length);
-  const digitHeight = digitWidth * 1.9;
-  const thickness = Math.max(1.4, digitWidth * 0.18);
-  const totalWidth = (digitWidth * manual.length) + (spacing * (manual.length - 1));
-  const startX = centerX - (totalWidth / 2);
-  const topY = baselineY - digitHeight;
-  const verticalHeight = (digitHeight - (3 * thickness)) / 2;
-  const segments = [];
-
-  function horizontalSegment(x, y) {
-    return `<rect x="${x.toFixed(4)}" y="${y.toFixed(4)}" width="${digitWidth.toFixed(4)}" height="${thickness.toFixed(4)}" />`;
-  }
-
-  function verticalSegment(x, y) {
-    return `<rect x="${x.toFixed(4)}" y="${y.toFixed(4)}" width="${thickness.toFixed(4)}" height="${verticalHeight.toFixed(4)}" />`;
-  }
-
-  for (let index = 0; index < manual.length; index += 1) {
-    const digit = manual[index];
-    const activeSegments = segmentMap[digit] ?? [];
-    const x = startX + (index * (digitWidth + spacing));
-
-    if (activeSegments.includes("a")) segments.push(horizontalSegment(x, topY));
-    if (activeSegments.includes("g")) segments.push(horizontalSegment(x, topY + thickness + verticalHeight));
-    if (activeSegments.includes("d")) segments.push(horizontalSegment(x, topY + (2 * thickness) + (2 * verticalHeight)));
-    if (activeSegments.includes("f")) segments.push(verticalSegment(x, topY + thickness));
-    if (activeSegments.includes("b")) segments.push(verticalSegment(x + digitWidth - thickness, topY + thickness));
-    if (activeSegments.includes("e")) segments.push(verticalSegment(x, topY + (2 * thickness) + verticalHeight));
-    if (activeSegments.includes("c")) segments.push(verticalSegment(x + digitWidth - thickness, topY + (2 * thickness) + verticalHeight));
-  }
-
-  return `<g fill="black">${segments.join("")}</g>`;
 }
 
 async function generateLabel() {

@@ -460,6 +460,20 @@
       background: white;
     }
 
+    .footer-link {
+      margin-top: 20px;
+      text-align: center;
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .footer-link a {
+      color: var(--accent-strong);
+      font-weight: 700;
+      text-decoration-thickness: 2px;
+      text-underline-offset: 2px;
+    }
+
     @media (max-width: 640px) {
       body { padding: 22px 14px 40px; }
       .box { padding: 15px; border-radius: 18px; }
@@ -484,7 +498,6 @@
     <input type="file" id="file" accept="image/*" />
     <p class="field-help">Upload a photo of the device's Matter QR code to extract the setup payload.</p>
     <p class="field-help">If photo decoding does not find a QR code, you can scan the label with a third-party QR app, copy the <code>MT:</code> value, and paste it into the field in step 2.</p>
-    <pre id="decoded" aria-live="polite"></pre>
   </div>
 
   <div class="box">
@@ -579,6 +592,10 @@
     <div id="output"></div>
   </div>
 </main>
+
+<div class="footer-link">
+  Project repo: <a href="https://github.com/chill-uk/matter-qr-app" target="_blank" rel="noreferrer">github.com/chill-uk/matter-qr-app</a>
+</div>
 
 <script type="module" src="app.js"></script>
 </body>
