@@ -107,7 +107,7 @@ docker pull ghcr.io/chill-uk/matter-qr-app:latest
 Then run it:
 
 ```bash
-docker run --rm -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
+docker run -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 ```
 
 ## Support
