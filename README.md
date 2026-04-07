@@ -87,7 +87,7 @@ docker build -t matter-qr-tool .
 Run:
 
 ```bash
-docker run --rm -p 8080:80 matter-qr-tool
+docker run -p 8080:80 matter-qr-tool
 ```
 
 Then open:
