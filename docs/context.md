@@ -1,8 +1,8 @@
-# Matter QR Tool Context
+# Matter QR Code Tool Context
 
 ## Project Goal
 
-Build a very small web app that helps users work with Matter onboarding QR codes without needing a backend-heavy service.
+Build a very small web app that helps users recover and reuse Matter onboarding QR codes without needing a backend-heavy service.
 
 Primary use cases:
 
@@ -11,7 +11,7 @@ Primary use cases:
 - extract the `MT:` Matter setup payload
 - derive the manual pairing code
 - display useful Matter onboarding fields in a human-readable way
-- export a clean QR-only SVG for CAD, laser, or slicer workflows
+- export clean QR-only SVG or STL files for 3D printing and replacement-label workflows
 
 ## Current Product Shape
 
@@ -20,7 +20,8 @@ The app is now intentionally simpler than the original label-generator idea.
 Current behavior:
 
 - photo upload and QR decode
-- direct `MT:` payload input/editing
+- direct `MT:` payload input/editing when scanning fails
+- inline MT payload validity feedback beside the text field
 - automatic manual pairing code extraction
 - parsed Matter details display:
   - setup PIN
@@ -32,7 +33,14 @@ Current behavior:
   - rendezvous methods
 - optional live vendor/product lookup through the CSA DCL
 - QR-only SVG export
-- compatibility mode for apps that fail on SVG viewport sizing
+  - optional compatibility mode for apps that fail on SVG viewport sizing
+  - optional mirrored SVG export for underside workflows
+- QR-only STL export
+  - printer nozzle and layer inputs
+  - QR block sizing controls
+  - mirrored STL export for underside workflows
+- built-in usage guidance for Bambu Lab / OrcaSlicer export workflows
+- support footer linking to the GitHub repo and Ko-fi page
 
 The current export does not include the Matter logo, rounded frame, or printed pairing code in the SVG output.
 
@@ -46,7 +54,8 @@ Default use is client-side only:
 
 Optional behavior:
 
-- if the user clicks the live CSA DCL lookup button, the app requests the matching vendor and product records for the extracted IDs through the same-origin proxy, with a vendor-directory fallback only when the upstream CSA deployment does not expose a single-vendor endpoint
+- if the user clicks the live CSA DCL lookup button, the app requests vendor and product records for the extracted IDs through the same-origin proxy
+- the full `MT:` payload, uploaded image, setup PIN, and manual pairing code are not sent during that lookup
 
 ## Tech Stack
 
@@ -79,18 +88,22 @@ Optional behavior:
 - `docker/nginx.conf` serves the static app
 - `/api/dcl/` is proxied to `https://on.dcl.csa-iot.org/dcl/`
 - the proxy exists so the browser app can do opt-in DCL lookups without relying on direct cross-origin requests
+- the frontend uses a cache-busted module URL for `app.js` to reduce stale-client issues after UI changes
 
 ## Current Constraints
 
 - SVG export is optimized for simplicity and compatibility, not branded label fidelity
+- the app focuses on QR-only output rather than full branded Matter label recreation
 - the optional DCL lookup depends on the upstream CSA service being available
 - the app is intentionally lightweight and has no persistence layer
-- no mm-based physical sizing workflow has been added yet
+- SVG export does not have a physical mm sizing workflow
+- there is still no automated test harness around the Matter parsing and export logic
 
 ## Good Future Improvements
 
 - add explicit mm sizing for print/CAD workflows
 - offer higher-level export presets for slicers or laser tools
+- add automated tests for known Matter payload samples and export regressions
 - improve product/vendor enrichment beyond the current local lookup plus DCL lookup flow
 - optionally add offline reference snapshots for vendor/product names
 - consider additional export formats only if there is a real workflow need
