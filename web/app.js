@@ -8,9 +8,8 @@ let finalSVG = "";
 let finalSTL = "";
 const fileInput = document.getElementById("file");
 const dataInput = document.getElementById("data");
+const payloadValidity = document.getElementById("payloadValidity");
 const manualDisplay = document.getElementById("manualDisplay");
-const nerdModeInput = document.getElementById("nerdMode");
-const nerdSection = document.getElementById("nerdSection");
 const lookupBtn = document.getElementById("dclLookupBtn");
 const lookupStatus = document.getElementById("lookupStatus");
 const detailsGrid = document.getElementById("detailsGrid");
@@ -23,6 +22,7 @@ const stlExportSection = document.getElementById("stlExportSection");
 const downloadBtn = document.getElementById("downloadBtn");
 const downloadStlBtn = document.getElementById("downloadStlBtn");
 const bambuSafeModeInput = document.getElementById("bambuSafeMode");
+const mirrorSvgInput = document.getElementById("mirrorSvg");
 const nozzleSizeInput = document.getElementById("nozzleSize");
 const layerHeightInput = document.getElementById("layerHeight");
 const moduleMultiplierInput = document.getElementById("moduleMultiplier");
@@ -60,8 +60,33 @@ function formatMillimeters(value) {
 }
 
 function setStatus(message, isError = false) {
+  if (!status) {
+    return;
+  }
   status.textContent = message;
   status.style.color = isError ? "#b00020" : "#333";
+}
+
+function updatePayloadValidity(state) {
+  if (!payloadValidity) {
+    return;
+  }
+
+  payloadValidity.classList.remove("is-valid", "is-invalid");
+
+  if (state === "valid") {
+    payloadValidity.classList.add("is-valid");
+    payloadValidity.innerHTML = '<span class="validity-icon">✓</span><span>Valid MT Code</span>';
+    return;
+  }
+
+  if (state === "invalid") {
+    payloadValidity.classList.add("is-invalid");
+    payloadValidity.innerHTML = '<span class="validity-icon">✕</span><span>Invalid MT Code</span>';
+    return;
+  }
+
+  payloadValidity.innerHTML = '<span class="validity-icon">-</span><span>Waiting For Input</span>';
 }
 
 function updateManualDisplay(value) {
@@ -120,10 +145,6 @@ function updateLookupButtonState() {
       : "Lookup Official Vendor/Product Info";
 }
 
-function updateNerdModeUi() {
-  nerdSection.hidden = !nerdModeInput.checked;
-}
-
 function updateExportModeUi() {
   const isSvgMode = exportMode === "svg";
 
@@ -133,6 +154,8 @@ function updateExportModeUi() {
   stlModeBtn.setAttribute("aria-selected", String(!isSvgMode));
   svgExportSection.hidden = !isSvgMode;
   stlExportSection.hidden = isSvgMode;
+  svgExportSection.style.display = isSvgMode ? "" : "none";
+  stlExportSection.style.display = isSvgMode ? "none" : "";
 }
 
 function formatCommissioningFlow(value) {
@@ -761,6 +784,7 @@ function syncManualCodeFromData({ force = false } = {}) {
       updateManualDisplay(extractedCode);
     }
 
+    updatePayloadValidity(payload ? "valid" : "empty");
     updateLookupButtonState();
     updateDetailsDisplay(payload);
   } catch {
@@ -768,6 +792,7 @@ function syncManualCodeFromData({ force = false } = {}) {
     clearLiveLookupData();
     lastAutoManualCode = "";
     updateManualDisplay("");
+    updatePayloadValidity(data ? "invalid" : "empty");
     updateLookupButtonState();
     updateDetailsDisplay(null);
   }
@@ -781,7 +806,10 @@ function getExportOptions() {
 
   return {
     exportMode,
-    bambuSafeMode: bambuSafeModeInput.checked,
+    svg: {
+      bambuSafeMode: bambuSafeModeInput.checked,
+      mirror: mirrorSvgInput.checked
+    },
     stl: {
       nozzleSize,
       layerHeight,
@@ -840,7 +868,7 @@ function getQrDefinition(data) {
   };
 }
 
-function renderQRModules(data, x, y, size) {
+function renderQRModules(data, x, y, size, mirror = false) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const totalModules = moduleCount + quietZoneModules * 2;
   const moduleSize = size / totalModules;
@@ -857,7 +885,10 @@ function renderQRModules(data, x, y, size) {
       }
 
       if (!isDark && runStart !== -1) {
-        const runX = x + ((runStart + quietZoneModules) * moduleSize);
+        const runColumn = mirror
+          ? totalModules - quietZoneModules - col
+          : runStart + quietZoneModules;
+        const runX = x + (runColumn * moduleSize);
         const runY = y + ((row + quietZoneModules) * moduleSize);
         const runWidth = (col - runStart) * moduleSize;
 
@@ -873,29 +904,33 @@ function renderQRModules(data, x, y, size) {
   return `<path d="${pathCommands.join("")}" fill="black"/>`;
 }
 
-function renderBambuSafeQR(data, x, y, moduleSize = 4) {
+function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const totalModules = moduleCount + (quietZoneModules * 2);
   const rects = [];
 
   for (let row = 0; row < moduleCount; row += 1) {
     for (let col = 0; col < moduleCount; col += 1) {
       if (!moduleData[row * moduleCount + col]) continue;
 
+      const drawColumn = mirror
+        ? totalModules - quietZoneModules - col - 1
+        : col + quietZoneModules;
       rects.push(
-        `<rect x="${x + ((col + quietZoneModules) * moduleSize)}" y="${y + ((row + quietZoneModules) * moduleSize)}" width="${moduleSize}" height="${moduleSize}"/>`
+        `<rect x="${x + (drawColumn * moduleSize)}" y="${y + ((row + quietZoneModules) * moduleSize)}" width="${moduleSize}" height="${moduleSize}"/>`
       );
     }
   }
 
   return {
     svg: rects.join(""),
-    width: (moduleCount + (quietZoneModules * 2)) * moduleSize,
-    height: (moduleCount + (quietZoneModules * 2)) * moduleSize
+    width: totalModules * moduleSize,
+    height: totalModules * moduleSize
   };
 }
 
-function buildBambuSafeSvg(data, includeSizingMetadata) {
-  const safeQR = renderBambuSafeQR(data, 0, 0, 4);
+function buildBambuSafeSvg(data, includeSizingMetadata, mirror = false) {
+  const safeQR = renderBambuSafeQR(data, 0, 0, 4, mirror);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${safeQR.width}" height="${safeQR.height}" viewBox="0 0 ${safeQR.width} ${safeQR.height}"`
     : "";
@@ -912,14 +947,14 @@ function getQrCanvasSize(data, moduleSize = 4) {
   return (moduleCount + (quietZoneModules * 2)) * moduleSize;
 }
 
-function buildNormalQrSvg(data, includeSizingMetadata) {
+function buildNormalQrSvg(data, includeSizingMetadata, mirror = false) {
   const size = getQrCanvasSize(data, 4);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"`
     : ` viewBox="0 0 ${size} ${size}"`;
 
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size)}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size, mirror)}</svg>`,
     size
   };
 }
@@ -1004,7 +1039,7 @@ function buildQrStl(data, settings) {
 
 async function generateLabel() {
   const data = getNormalizedMatterQrText(dataInput.value);
-  const { exportMode: selectedExportMode, bambuSafeMode, stl } = getExportOptions();
+  const { exportMode: selectedExportMode, svg, stl } = getExportOptions();
   updateStlSummary();
 
   if (!data) {
@@ -1026,16 +1061,16 @@ async function generateLabel() {
 
     finalSTL = "";
 
-    if (bambuSafeMode) {
-      const downloadSafeSvg = buildBambuSafeSvg(data, false);
-      const previewSafeSvg = buildBambuSafeSvg(data, true);
+    if (svg.bambuSafeMode) {
+      const downloadSafeSvg = buildBambuSafeSvg(data, false, svg.mirror);
+      const previewSafeSvg = buildBambuSafeSvg(data, true, svg.mirror);
       finalSVG = downloadSafeSvg.svg;
       output.innerHTML = previewSafeSvg.svg;
       return;
     }
 
-    const downloadNormalSvg = buildNormalQrSvg(data, false);
-    const previewNormalSvg = buildNormalQrSvg(data, true);
+    const downloadNormalSvg = buildNormalQrSvg(data, false, svg.mirror);
+    const previewNormalSvg = buildNormalQrSvg(data, true, svg.mirror);
     finalSVG = downloadNormalSvg.svg;
     output.innerHTML = previewNormalSvg.svg;
   } catch (error) {
@@ -1050,15 +1085,7 @@ function downloadLabel() {
     return;
   }
 
-  const blob = new Blob([finalSVG], { type: "image/svg+xml" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "matter-label.svg";
-  a.click();
-
-  URL.revokeObjectURL(url);
+  downloadBlob(finalSVG, "image/svg+xml", "matter-label.svg");
   setStatus("SVG downloaded.");
 }
 
@@ -1068,38 +1095,47 @@ function downloadStl() {
     return;
   }
 
-  const blob = new Blob([finalSTL], { type: "model/stl" });
-  const url = URL.createObjectURL(blob);
-
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "matter-label.stl";
-  a.click();
-
-  URL.revokeObjectURL(url);
+  downloadBlob(finalSTL, "model/stl", "matter-label.stl");
   setStatus("STL downloaded.");
 }
 
+function downloadBlob(contents, mimeType, filename) {
+  const blob = new Blob([contents], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.style.display = "none";
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  window.setTimeout(() => {
+    URL.revokeObjectURL(url);
+  }, 1000);
+}
+
 lookupBtn.addEventListener("click", lookupOfficialMatterInfo);
-nerdModeInput.addEventListener("change", updateNerdModeUi);
-svgModeBtn.addEventListener("click", () => {
-  exportMode = "svg";
+function selectExportMode(nextMode) {
+  exportMode = nextMode;
   updateExportModeUi();
   if (dataInput.value.trim()) {
     generateLabel();
   }
+}
+
+svgModeBtn.addEventListener("click", (event) => {
+  event.preventDefault();
+  selectExportMode("svg");
 });
-stlModeBtn.addEventListener("click", () => {
-  exportMode = "stl";
-  updateExportModeUi();
-  if (dataInput.value.trim()) {
-    generateLabel();
-  }
+stlModeBtn.addEventListener("click", (event) => {
+  event.preventDefault();
+  selectExportMode("stl");
 });
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 
-for (const input of [bambuSafeModeInput]) {
+for (const input of [bambuSafeModeInput, mirrorSvgInput]) {
   input.addEventListener("change", () => {
     if (dataInput.value.trim()) {
       generateLabel();
@@ -1126,5 +1162,5 @@ for (const input of [
 
 updateLookupButtonState();
 updateExportModeUi();
-updateNerdModeUi();
 updateStlSummary();
+updatePayloadValidity("empty");

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Matter QR Tool</title>
+  <title>Matter QR Helper</title>
   <style>
     :root {
       --bg: #f3efe7;
@@ -13,6 +13,9 @@
       --muted: #6c6358;
       --accent: #1f6a53;
       --accent-strong: #154b3b;
+      --danger-bg: #fff0ee;
+      --danger-border: rgba(185, 72, 58, 0.34);
+      --danger-text: #8a2f25;
       --warning-bg: #fff5d8;
       --warning-border: #e4cf8e;
       --shadow: 0 18px 40px rgba(70, 53, 28, 0.08);
@@ -83,6 +86,45 @@
       outline: none;
       border-color: rgba(31, 106, 83, 0.55);
       box-shadow: 0 0 0 4px rgba(31, 106, 83, 0.12);
+    }
+
+    .input-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .payload-validity {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .payload-validity.is-valid {
+      border-color: rgba(31, 106, 83, 0.26);
+      background: rgba(236, 248, 243, 0.95);
+      color: var(--accent-strong);
+    }
+
+    .payload-validity.is-invalid {
+      border-color: rgba(185, 72, 58, 0.24);
+      background: rgba(255, 240, 238, 0.96);
+      color: #9b3125;
+    }
+
+    .validity-icon {
+      font-size: 1rem;
+      line-height: 1;
     }
 
     button {
@@ -414,17 +456,18 @@
     .privacy {
       margin: 0 0 18px;
       padding: 12px 14px;
-      border-left: 4px solid rgba(31, 106, 83, 0.45);
-      border-radius: 0 14px 14px 0;
-      background: rgba(255, 255, 255, 0.46);
-      color: var(--muted);
+      border: 1px solid var(--danger-border);
+      border-radius: 18px;
+      background: var(--danger-bg);
+      color: var(--text);
+      box-shadow: 0 12px 28px rgba(138, 47, 37, 0.08);
       line-height: 1.55;
+      font-weight: 600;
     }
 
-    #status {
-      min-height: 1.4em;
-      margin-top: 4px;
-      font-weight: 600;
+    .privacy strong {
+      display: block;
+      margin-bottom: 4px;
     }
 
     #output {
@@ -442,14 +485,6 @@
       display: none;
     }
 
-    .nerd-toggle {
-      margin: 0 0 14px;
-    }
-
-    .nerd-section[hidden] {
-      display: none;
-    }
-
     svg {
       display: block;
       max-width: 100%;
@@ -463,11 +498,11 @@
     .footer-link {
       margin-top: 22px;
       padding: 16px 18px;
-      border: 1px solid rgba(176, 113, 54, 0.22);
+      border: 1px solid rgba(72, 118, 185, 0.22);
       border-radius: 20px;
-      background: linear-gradient(135deg, rgba(176, 113, 54, 0.08), rgba(255, 255, 255, 0.72));
-      color: var(--muted);
-      box-shadow: 0 14px 28px rgba(95, 66, 34, 0.08);
+      background: linear-gradient(135deg, rgba(72, 118, 185, 0.08), rgba(255, 255, 255, 0.72));
+      color: var(--text);
+      box-shadow: 0 14px 28px rgba(48, 84, 131, 0.08);
     }
 
     .footer-link h3 {
@@ -495,10 +530,10 @@
       min-width: 0;
       gap: 8px;
       padding: 10px 14px;
-      border: 1px solid rgba(176, 113, 54, 0.24);
+      border: 1px solid rgba(72, 118, 185, 0.24);
       border-radius: 999px;
-      background: rgba(255, 251, 247, 0.86);
-      color: #8b4f24;
+      background: rgba(247, 251, 255, 0.9);
+      color: #2f5d93;
       font-weight: 700;
       text-decoration: none;
       text-decoration-thickness: 2px;
@@ -508,7 +543,7 @@
 
     .footer-link a:hover {
       transform: translateY(-1px);
-      box-shadow: 0 10px 20px rgba(139, 79, 36, 0.12);
+      box-shadow: 0 10px 20px rgba(47, 93, 147, 0.12);
       background: rgba(255, 255, 255, 0.96);
     }
 
@@ -524,6 +559,9 @@
       .box { padding: 15px; border-radius: 18px; }
       button { width: 100%; }
       .button-row { display: block; }
+      .input-row {
+        grid-template-columns: 1fr;
+      }
       .pairing-value { letter-spacing: 0.06em; }
       .print-grid label {
         grid-template-columns: 1fr;
@@ -540,9 +578,9 @@
 </head>
 <body>
 <main class="page">
-  <h1>Matter QR Tool</h1>
-  <p class="lead">Decode a Matter QR image, inspect the extracted payload, and generate an SVG or STL export.</p>
-  <p class="privacy">Everything stays in your browser by default. The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs, although some CSA deployments may require a public vendor-directory fallback.</p>
+  <h1>Matter QR Helper</h1>
+  <p class="lead">Decode a Matter QR image, recover the setup code, and generate SVG or STL files for 3D printing or replacement labels.</p>
+  <p class="privacy"><strong>Everything stays in your browser by default.</strong>The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs, although some CSA deployments may require a public vendor-directory fallback.</p>
 
   <div class="box">
     <h3>1. Upload Photo & Decode</h3>
@@ -553,16 +591,18 @@
 
   <div class="box">
     <h3>2. Review Payload</h3>
-    <input id="data" placeholder="MT:..." size="40"/>
+    <div class="input-row">
+      <input id="data" placeholder="MT:..." size="40"/>
+      <div id="payloadValidity" class="payload-validity" aria-live="polite">
+        <span class="validity-icon">-</span>
+        <span>Waiting For Input</span>
+      </div>
+    </div>
     <p class="field-help">The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.</p>
     <div class="pairing-card">
       <div class="pairing-label">Extracted Pairing Code</div>
       <div id="manualDisplay" class="pairing-value">-</div>
     </div>
-    <div class="options nerd-toggle">
-      <label><input type="checkbox" id="nerdMode" /> Nerd mode: show Matter details and live lookup</label>
-    </div>
-    <div id="nerdSection" class="nerd-section" hidden>
     <div class="lookup-panel">
       <div class="button-row">
         <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Lookup Official Vendor/Product Info</button>
@@ -571,7 +611,6 @@
       <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
     </div>
     <div id="detailsGrid" class="details-grid"></div>
-    </div>
     <div class="note">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
   </div>
 
@@ -584,6 +623,18 @@
     <div id="svgExportSection" class="export-section" hidden>
       <div class="options">
         <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
+        <label><input type="checkbox" id="mirrorSvg" /> Mirror For Underside Prints</label>
+      </div>
+      <div class="instruction-card">
+        <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
+        <ul class="workflow-list">
+          <li>Generate and download the QR code SVG.</li>
+          <li>Right-click the part you want to modify.</li>
+          <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR-code SVG.</li>
+          <li>Position the modifier where you want the QR.</li>
+          <li>Change the filament color so it shows up on the finished print.</li>
+          <li>If the final visible QR would end up reversed, enable the mirror option before exporting.</li>
+        </ul>
       </div>
       <div class="button-row">
         <button id="downloadBtn" type="button">Download SVG</button>
@@ -628,6 +679,7 @@
       <div class="instruction-card">
         <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
         <ul class="workflow-list">
+          <li>Generate and download the QR code STL.</li>
           <li>Right-click the part you want to modify.</li>
           <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR-code STL.</li>
           <li>Position the modifier where you want the QR.</li>
@@ -639,7 +691,6 @@
       <button id="downloadStlBtn" class="button-secondary" type="button">Download STL</button>
       </div>
     </div>
-    <div id="status" aria-live="polite"></div>
     <div id="output"></div>
   </div>
 </main>
@@ -665,6 +716,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js"></script>
+<script type="module" src="app.js?v=20260407-1"></script>
 </body>
 </html>
