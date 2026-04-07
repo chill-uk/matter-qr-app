@@ -52,6 +52,10 @@
       line-height: 1.5;
     }
 
+    .lead span {
+      display: block;
+    }
+
     .box {
       margin-bottom: 18px;
       padding: 18px;
@@ -352,12 +356,20 @@
       max-width: 100%;
     }
 
+    .settings-columns {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      align-items: start;
+    }
+
     .settings-group + .settings-group {
       margin-top: 8px;
     }
 
     .settings-group {
       margin-top: 14px;
+      min-width: 0;
     }
 
     .settings-group h4 {
@@ -470,6 +482,10 @@
       margin-bottom: 4px;
     }
 
+    .privacy span {
+      display: block;
+    }
+
     #output {
       margin-top: 14px;
       padding: 14px;
@@ -567,6 +583,10 @@
         grid-template-columns: 1fr;
         gap: 6px;
       }
+      .settings-columns {
+        grid-template-columns: 1fr;
+        gap: 0;
+      }
       .support-links {
         flex-direction: column;
       }
@@ -578,9 +598,10 @@
 </head>
 <body>
 <main class="page">
-  <h1>Matter QR Helper</h1>
-  <p class="lead">Decode a Matter QR image, recover the setup code, and generate SVG or STL files for 3D printing or replacement labels.</p>
-  <p class="privacy"><strong>Everything stays in your browser by default.</strong>The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs, although some CSA deployments may require a public vendor-directory fallback.</p>
+  <h1>Matter QR Code Tool</h1>
+  <p class="lead"><span>This tool lets you upload a Matter QR code, decode it, and recover the setup code.</span><span>You can then generate clean SVG or STL files, ready for 3D printing or creating replacement labels.</span></p>
+  <p class="privacy">Everything runs locally in your browser. No sensitive data is sent anywhere.
+    <span>The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs.</span></p>
 
   <div class="box">
     <h3>1. Upload Photo & Decode</h3>
@@ -643,35 +664,36 @@
     <div id="stlExportSection" class="export-section lookup-panel">
       <h4>STL Settings</h4>
       <p class="lookup-help">Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.</p>
-      <div class="settings-group">
-        <h4>Your Printer</h4>
-        <div class="print-grid">
-          <label>
-            <span class="setting-text">Nozzle Size (mm)</span>
-            <input id="nozzleSize" type="number" min="0.1" step="0.05" value="0.4" />
-          </label>
-          <label>
-            <span class="setting-text">Layer Height (mm)</span>
-            <input id="layerHeight" type="number" min="0.05" step="0.05" value="0.2" />
-          </label>
+      <div class="settings-columns">
+        <div class="settings-group">
+          <h4>Your Printer</h4>
+          <div class="print-grid">
+            <label>
+              <span class="setting-text">Nozzle Size (mm)</span>
+              <input id="nozzleSize" type="number" min="0.1" step="0.05" value="0.4" />
+            </label>
+            <label>
+              <span class="setting-text">Layer Height (mm)</span>
+              <input id="layerHeight" type="number" min="0.05" step="0.05" value="0.2" />
+            </label>
+          </div>
         </div>
-      </div>
-      <div class="settings-group">
-        <h4>QR Code Output</h4>
-        <p class="settings-help">These control how chunky the QR blocks are and whether the STL should be mirrored for underside use.</p>
-        <div class="print-grid">
-          <label>
-            <span class="setting-text">QR Square Width (x nozzle)</span>
-            <input id="moduleMultiplier" type="number" min="2" step="1" value="4" />
-          </label>
-          <label>
-            <span class="setting-text">QR Height (layers)</span>
-            <input id="raisedLayerCount" type="number" min="1" step="1" value="2" />
-          </label>
-          <label>
-            <span class="setting-text">Mirror For Underside Prints</span>
-            <input id="mirrorStl" type="checkbox" />
-          </label>
+        <div class="settings-group">
+          <h4>QR Code Output</h4>
+          <div class="print-grid">
+            <label>
+              <span class="setting-text">QR Square Width (x nozzle)</span>
+              <input id="moduleMultiplier" type="number" min="2" step="1" value="4" />
+            </label>
+            <label>
+              <span class="setting-text">QR Height (layers)</span>
+              <input id="raisedLayerCount" type="number" min="1" step="1" value="2" />
+            </label>
+            <label>
+              <span class="setting-text">Mirror For Underside Prints</span>
+              <input id="mirrorStl" type="checkbox" />
+            </label>
+          </div>
         </div>
       </div>
       <div id="stlSummary" class="stl-summary" aria-live="polite"></div>
@@ -698,7 +720,7 @@
 <div class="page">
   <div class="footer-link">
     <h3>Support</h3>
-    <p>If this tool helped you rescue a device or save some time, you can follow the project or support future work here.</p>
+    <p>If this tool helped you rescue a device or saved you some time, you can follow the project or support me here.</p>
     <div class="support-links">
       <a href="https://github.com/chill-uk/matter-qr-app" target="_blank" rel="noreferrer">
         <svg class="support-icon" viewBox="0 0 16 16" aria-hidden="true">
