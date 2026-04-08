@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="favicon.png?v=1" />
   <title>Matter QR Helper</title>
   <style>
@@ -113,6 +114,32 @@
       font-size: 0.92rem;
       font-weight: 700;
       white-space: nowrap;
+    }
+
+    .status-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 46px;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-strong);
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .status-chip.is-success {
+      border-color: rgba(31, 106, 83, 0.26);
+      background: rgba(236, 248, 243, 0.95);
+      color: var(--accent-strong);
+    }
+
+    .status-chip.is-error {
+      border-color: rgba(185, 72, 58, 0.24);
+      background: rgba(255, 240, 238, 0.96);
+      color: #9b3125;
     }
 
     .payload-validity.is-valid {
@@ -275,11 +302,29 @@
       font-family: "SFMono-Regular", Consolas, monospace;
     }
 
-    .details-grid {
+    .details-grid,
+    .details-links {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
       gap: 10px;
       margin: 0 0 14px;
+    }
+
+    .details-links {
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      margin-bottom: 0;
+    }
+
+    .detail-group-card {
+      grid-column: 1 / -1;
+      margin: 0 0 14px;
+      padding: 14px;
+      border: 1px solid rgba(31, 106, 83, 0.18);
+      border-radius: 18px;
+      background:
+        linear-gradient(135deg, rgba(31, 106, 83, 0.05), rgba(255, 255, 255, 0.82)),
+        rgba(255, 255, 255, 0.72);
+      box-shadow: var(--shadow);
     }
 
     .detail-card {
@@ -287,6 +332,21 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       background: rgba(255, 255, 255, 0.6);
+    }
+
+    .details-links .detail-card {
+      background:
+        linear-gradient(135deg, rgba(31, 106, 83, 0.05), rgba(255, 255, 255, 0.78)),
+        rgba(255, 255, 255, 0.72);
+    }
+
+    .detail-section-title {
+      margin: 2px 0 12px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
     }
 
     .detail-key {
@@ -309,13 +369,6 @@
       color: var(--accent-strong);
       text-decoration-thickness: 2px;
       text-underline-offset: 2px;
-    }
-
-    .detail-help {
-      margin-top: 6px;
-      color: var(--muted);
-      font-size: 0.86rem;
-      line-height: 1.4;
     }
 
     .lookup-panel {
@@ -346,6 +399,13 @@
       color: var(--muted);
       font-size: 0.92rem;
       line-height: 1.45;
+    }
+
+    .upload-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: center;
     }
 
     .print-grid {
@@ -579,6 +639,9 @@
       .input-row {
         grid-template-columns: 1fr;
       }
+      .upload-row {
+        grid-template-columns: 1fr;
+      }
       .pairing-value { letter-spacing: 0.06em; }
       .print-grid label {
         grid-template-columns: 1fr;
@@ -606,7 +669,13 @@
 
   <div class="box">
     <h3>1. Upload Photo & Decode</h3>
-    <input type="file" id="file" accept="image/*" />
+    <div class="upload-row">
+      <input type="file" id="file" accept="image/*" />
+      <div id="status" class="status-chip" aria-live="polite">
+        <span class="validity-icon">-</span>
+        <span>Waiting For Upload</span>
+      </div>
+    </div>
     <p class="field-help">Upload a photo of the device's Matter QR code to extract the setup payload.</p>
     <p class="field-help">If photo decoding does not find a QR code, you can scan the label with a third-party QR app, copy the <code>MT:</code> value, and paste it into the field in step 2.</p>
   </div>
@@ -639,10 +708,10 @@
   <div class="box">
     <h3>3. Export</h3>
     <div class="mode-switch" role="tablist" aria-label="Export mode">
-      <button id="svgModeBtn" class="mode-button" type="button" role="tab" aria-selected="false">SVG Export</button>
-      <button id="stlModeBtn" class="mode-button is-active" type="button" role="tab" aria-selected="true">STL Export</button>
+      <button id="svgModeBtn" class="mode-button" type="button" role="tab" aria-selected="false" aria-controls="svgExportSection" tabindex="-1">SVG Export</button>
+      <button id="stlModeBtn" class="mode-button is-active" type="button" role="tab" aria-selected="true" aria-controls="stlExportSection" tabindex="0">STL Export</button>
     </div>
-    <div id="svgExportSection" class="export-section" hidden>
+    <div id="svgExportSection" class="export-section" role="tabpanel" aria-labelledby="svgModeBtn" hidden>
       <div class="options">
         <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
         <label><input type="checkbox" id="mirrorSvg" /> Mirror For Underside Prints</label>
@@ -662,7 +731,7 @@
         <button id="downloadBtn" type="button">Download SVG</button>
       </div>
     </div>
-    <div id="stlExportSection" class="export-section lookup-panel">
+    <div id="stlExportSection" class="export-section lookup-panel" role="tabpanel" aria-labelledby="stlModeBtn">
       <h4>STL Settings</h4>
       <p class="lookup-help">Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.</p>
       <div class="settings-columns">

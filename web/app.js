@@ -63,8 +63,16 @@ function setStatus(message, isError = false) {
   if (!status) {
     return;
   }
-  status.textContent = message;
-  status.style.color = isError ? "#b00020" : "#333";
+
+  status.classList.remove("is-success", "is-error");
+
+  if (!message) {
+    status.innerHTML = '<span class="validity-icon">-</span><span>Waiting For Upload</span>';
+    return;
+  }
+
+  status.classList.add(isError ? "is-error" : "is-success");
+  status.innerHTML = `<span class="validity-icon">${isError ? "✕" : "✓"}</span><span>${escapeHtml(message)}</span>`;
 }
 
 function updatePayloadValidity(state) {
@@ -152,6 +160,8 @@ function updateExportModeUi() {
   stlModeBtn.classList.toggle("is-active", !isSvgMode);
   svgModeBtn.setAttribute("aria-selected", String(isSvgMode));
   stlModeBtn.setAttribute("aria-selected", String(!isSvgMode));
+  svgModeBtn.tabIndex = isSvgMode ? 0 : -1;
+  stlModeBtn.tabIndex = isSvgMode ? -1 : 0;
   svgExportSection.hidden = !isSvgMode;
   stlExportSection.hidden = isSvgMode;
   svgExportSection.style.display = isSvgMode ? "" : "none";
@@ -234,11 +244,10 @@ function buildLinkValue(url, label) {
 }
 
 function renderDetailCards(details) {
-  return details.map(({ key, value = "", help = "", valueHtml = "" }) => `
+  return details.map(({ key, value = "", valueHtml = "" }) => `
     <div class="detail-card">
       <div class="detail-key">${escapeHtml(key)}</div>
       <div class="detail-value">${valueHtml || escapeHtml(value)}</div>
-      <div class="detail-help">${escapeHtml(help)}</div>
     </div>
   `).join("");
 }
@@ -321,8 +330,10 @@ function updateDetailsDisplay(payload) {
     });
   }
 
+  const dclLinks = [];
+
   if (vendorRecord?.vendorLandingPageURL) {
-    details.push({
+    dclLinks.push({
       key: "Vendor Page",
       valueHtml: buildLinkValue(vendorRecord.vendorLandingPageURL, "Open vendor site"),
       help: "The official vendor landing page from the CSA DCL record."
@@ -330,7 +341,7 @@ function updateDetailsDisplay(payload) {
   }
 
   if (modelRecord?.productUrl) {
-    details.push({
+    dclLinks.push({
       key: "Product Page",
       valueHtml: buildLinkValue(modelRecord.productUrl, "Open product page"),
       help: "The product page published in the official CSA DCL model record."
@@ -338,14 +349,28 @@ function updateDetailsDisplay(payload) {
   }
 
   if (modelRecord?.supportUrl) {
-    details.push({
+    dclLinks.push({
       key: "Support Page",
       valueHtml: buildLinkValue(modelRecord.supportUrl, "Open support page"),
       help: "The support page published in the official CSA DCL model record."
     });
   }
 
-  detailsGrid.innerHTML = renderDetailCards(details);
+  const linkSection = dclLinks.length
+    ? `
+      <div class="detail-group-card">
+        <div class="detail-section-title">Official DCL Links</div>
+        <div class="details-links">
+          ${renderDetailCards(dclLinks)}
+        </div>
+      </div>
+    `
+    : "";
+
+  detailsGrid.innerHTML = `
+    ${renderDetailCards(details)}
+    ${linkSection}
+  `;
 }
 
 async function fetchJson(url) {
@@ -838,17 +863,19 @@ fileInput.addEventListener("change", async (e) => {
     generateLabel();
     setStatus(
       lastAutoManualCode
-        ? "QR code decoded. Manual pairing code extracted."
-        : "QR code decoded. Ready to generate."
+        ? "Valid QR code."
+        : "QR decoded."
     );
   } catch (error) {
-    setStatus(`Could not decode the uploaded image: ${error.message}`, true);
+    setStatus("Invalid QR code.", true);
   } finally {
     URL.revokeObjectURL(url);
+    fileInput.value = "";
   }
 });
 
 dataInput.addEventListener("input", () => {
+  setStatus("");
   syncManualCodeFromData();
   updateStlSummary();
   if (!dataInput.value.trim()) {
@@ -1043,7 +1070,6 @@ async function generateLabel() {
   updateStlSummary();
 
   if (!data) {
-    setStatus("Enter or decode a valid Matter QR payload first.", true);
     clearGeneratedOutput();
     return;
   }
@@ -1124,6 +1150,36 @@ function selectExportMode(nextMode) {
   }
 }
 
+function moveExportModeFocus(nextMode) {
+  selectExportMode(nextMode);
+  (nextMode === "svg" ? svgModeBtn : stlModeBtn).focus();
+}
+
+function handleExportModeKeydown(event) {
+  switch (event.key) {
+    case "ArrowLeft":
+    case "ArrowUp":
+      event.preventDefault();
+      moveExportModeFocus(exportMode === "svg" ? "stl" : "svg");
+      break;
+    case "ArrowRight":
+    case "ArrowDown":
+      event.preventDefault();
+      moveExportModeFocus(exportMode === "svg" ? "stl" : "svg");
+      break;
+    case "Home":
+      event.preventDefault();
+      moveExportModeFocus("svg");
+      break;
+    case "End":
+      event.preventDefault();
+      moveExportModeFocus("stl");
+      break;
+    default:
+      break;
+  }
+}
+
 svgModeBtn.addEventListener("click", (event) => {
   event.preventDefault();
   selectExportMode("svg");
@@ -1132,6 +1188,8 @@ stlModeBtn.addEventListener("click", (event) => {
   event.preventDefault();
   selectExportMode("stl");
 });
+svgModeBtn.addEventListener("keydown", handleExportModeKeydown);
+stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 
@@ -1164,3 +1222,4 @@ updateLookupButtonState();
 updateExportModeUi();
 updateStlSummary();
 updatePayloadValidity("empty");
+setStatus("");
