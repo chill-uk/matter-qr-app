@@ -6,6 +6,7 @@ Build a very small web app that helps users recover and reuse Matter onboarding 
 
 Primary use cases:
 
+- start a live camera scan for a Matter QR code in the browser
 - upload a photo of a Matter QR code
 - decode the QR in the browser
 - extract the `MT:` Matter setup payload
@@ -19,6 +20,7 @@ The app is now intentionally simpler than the original label-generator idea.
 
 Current behavior:
 
+- live camera scan with in-browser QR detection
 - photo upload and QR decode
 - direct `MT:` payload input/editing when scanning fails
 - inline MT payload validity feedback beside the text field
@@ -35,10 +37,14 @@ Current behavior:
 - QR-only SVG export
   - optional compatibility mode for apps that fail on SVG viewport sizing
   - optional mirrored SVG export for underside workflows
+  - square modules with configurable corner radius percentage
+  - round-dot modules
 - QR-only STL export
   - printer nozzle and layer inputs
   - QR block sizing controls
   - mirrored STL export for underside workflows
+  - square modules with configurable corner radius percentage
+  - round-dot modules
 - built-in usage guidance for Bambu Lab / OrcaSlicer export workflows
 - support footer linking to the GitHub repo and Ko-fi page
 
@@ -89,6 +95,7 @@ Optional behavior:
 - `/api/dcl/` is proxied to `https://on.dcl.csa-iot.org/dcl/`
 - the proxy exists so the browser app can do opt-in DCL lookups without relying on direct cross-origin requests
 - the frontend uses a cache-busted module URL for `app.js` to reduce stale-client issues after UI changes
+- GHCR image publishing is driven by version tag pushes only
 
 ## Current Constraints
 
@@ -98,6 +105,7 @@ Optional behavior:
 - the app is intentionally lightweight and has no persistence layer
 - SVG export does not have a physical mm sizing workflow
 - there is still no automated test harness around the Matter parsing and export logic
+- mobile live camera scanning may require `https://` depending on browser security rules, especially on iOS
 
 ## Good Future Improvements
 

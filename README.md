@@ -12,6 +12,7 @@ Note: The regenerated QR code will often look different from the original label.
 
 ### Decode
 
+- Start a live camera scan in the browser to decode a Matter QR code directly
 - Upload a photo of a Matter QR code and decode it in the browser
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
@@ -19,6 +20,10 @@ Note: The regenerated QR code will often look different from the original label.
 #### If Decoding Fails
 
 If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app. You must use a 3rd party app to scan the QR code as the apple built in one will try and pair your device.
+
+#### Live Camera Scan Notes
+
+- Live camera scanning depends on browser camera support
 
 ### Inspect
 
@@ -35,6 +40,9 @@ If photo upload does not find a QR code, use your phone or another QR scanning a
 
 - Export an SVG
 - Export an STL
+- Choose square or round-dot QR modules
+- Adjust square corner radius from `0%` to `100%`
+- Mirror the output for underside print workflows
 
 ## Privacy
 
