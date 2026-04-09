@@ -89,6 +89,8 @@ http://localhost:8080
 
 ## Pull From GHCR
 
+Images are published to GHCR only when a version tag such as `v1.0.0` is pushed.
+
 Pull the latest published image:
 
 ```bash
@@ -100,40 +102,6 @@ Then run it:
 ```bash
 docker run -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 ```
-
-Published images follow the standard package path:
-
-```text
-ghcr.io/<owner>/<repo>
-```
-
-For this repository, that is:
-
-```text
-ghcr.io/chill-uk/matter-qr-app
-```
-
-### GHCR Tags
-
-The container workflow publishes a mix of stable and immutable tags:
-
-- default branch: `latest`, `main` or `master`, and `sha-<commit>`
-- releases: `1.2.3`, `1.2`, and `sha-<commit>`
-- pull requests: `pr-<number>` and `sha-<commit>`
-
-For deployments, prefer a release tag or a specific `sha-<commit>` tag instead of relying only on `latest`.
-
-### GHCR Cleanup Policy
-
-The scheduled GHCR cleanup workflow keeps:
-
-- all release versions tagged like `v1.2.3` or `1.2.3`
-- the latest 10 default-branch builds
-- the latest 5 builds for each `pr-<number>` tag
-- the latest 5 other tagged builds
-- the latest 3 untagged versions
-
-Older non-release versions are deleted automatically on the cleanup schedule or when the workflow is run manually.
 
 ## Support
 
