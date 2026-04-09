@@ -24,6 +24,7 @@ const downloadStlBtn = document.getElementById("downloadStlBtn");
 const bambuSafeModeInput = document.getElementById("bambuSafeMode");
 const mirrorOutputInput = document.getElementById("mirrorOutput");
 const moduleShapeInput = document.getElementById("moduleShape");
+const cornerRadiusPercentInput = document.getElementById("cornerRadiusPercent");
 const nozzleSizeInput = document.getElementById("nozzleSize");
 const layerHeightInput = document.getElementById("layerHeight");
 const moduleMultiplierInput = document.getElementById("moduleMultiplier");
@@ -40,6 +41,64 @@ const QR_MODULE_SHAPES = {
   ROUND: "round"
 };
 const ROUND_STL_SEGMENTS = 48;
+const DEFAULT_CORNER_RADIUS_PERCENT = 50;
+const MODULE_CORNER_SEGMENTS = 4;
+const MODULE_CORNER_BITS = {
+  TOP_LEFT: 1,
+  TOP_RIGHT: 2,
+  BOTTOM_RIGHT: 4,
+  BOTTOM_LEFT: 8
+};
+const MODULE_CORNER_CONFIGS = [
+  {
+    bit: MODULE_CORNER_BITS.TOP_LEFT,
+    key: "topLeft",
+    sideA: [-1, 0],
+    sideB: [0, -1],
+    diagonal: [-1, -1],
+    corner: [0, 0],
+    entry: [1, 0],
+    center: [1, 1],
+    arcStart: (3 * Math.PI) / 2,
+    arcEnd: Math.PI
+  },
+  {
+    bit: MODULE_CORNER_BITS.TOP_RIGHT,
+    key: "topRight",
+    sideA: [-1, 0],
+    sideB: [0, 1],
+    diagonal: [-1, 1],
+    corner: [1, 0],
+    entry: [0, 1],
+    center: [-1, 1],
+    arcStart: 0,
+    arcEnd: -Math.PI / 2
+  },
+  {
+    bit: MODULE_CORNER_BITS.BOTTOM_RIGHT,
+    key: "bottomRight",
+    sideA: [1, 0],
+    sideB: [0, 1],
+    diagonal: [1, 1],
+    corner: [1, 1],
+    entry: [-1, 0],
+    center: [-1, -1],
+    arcStart: Math.PI / 2,
+    arcEnd: 0
+  },
+  {
+    bit: MODULE_CORNER_BITS.BOTTOM_LEFT,
+    key: "bottomLeft",
+    sideA: [1, 0],
+    sideB: [0, -1],
+    diagonal: [1, -1],
+    corner: [0, 1],
+    entry: [0, -1],
+    center: [1, -1],
+    arcStart: Math.PI,
+    arcEnd: Math.PI / 2
+  }
+];
 const KNOWN_VENDOR_NAMES = {
   4476: "IKEA of Sweden"
 };
@@ -62,6 +121,10 @@ function formatSvgNumber(value) {
 
 function formatMillimeters(value) {
   return `${Number.parseFloat(value.toFixed(2)).toString()} mm`;
+}
+
+function clamp(value, min, max) {
+  return Math.min(max, Math.max(min, value));
 }
 
 function setStatus(message, isError = false) {
@@ -579,6 +642,10 @@ function clearGeneratedOutput() {
   finalSTL = "";
 }
 
+function renderPreviewError(message) {
+  output.innerHTML = `<div class="preview-error">${escapeHtml(message)}</div>`;
+}
+
 function buildStlSummaryLine(parts) {
   const line = document.createElement("div");
 
@@ -652,6 +719,17 @@ function parsePositiveNumber(value, fallback) {
 function parsePositiveInteger(value, fallback) {
   const parsedValue = Number.parseInt(value, 10);
   return Number.isInteger(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+}
+
+function parsePercent(value, fallback) {
+  const parsedValue = Number.parseFloat(value);
+  return Number.isFinite(parsedValue)
+    ? clamp(parsedValue, 0, 100)
+    : fallback;
+}
+
+function getCornerRadiusRatio(cornerRadiusPercent) {
+  return clamp(cornerRadiusPercent, 0, 100) / 200;
 }
 
 function decimalStringWithPadding(number, length) {
@@ -872,24 +950,33 @@ function getExportOptions() {
   const layerHeight = parsePositiveNumber(layerHeightInput.value, 0.2);
   const moduleMultiplier = parsePositiveInteger(moduleMultiplierInput.value, 4);
   const raisedLayerCount = parsePositiveInteger(raisedLayerCountInput.value, 2);
-  const moduleShape = Object.values(QR_MODULE_SHAPES).includes(moduleShapeInput.value)
-    ? moduleShapeInput.value
+  const moduleShape = moduleShapeInput.value === QR_MODULE_SHAPES.ROUND
+    ? QR_MODULE_SHAPES.ROUND
     : QR_MODULE_SHAPES.SQUARE;
+  const cornerRadiusPercent = parsePercent(
+    cornerRadiusPercentInput?.value,
+    DEFAULT_CORNER_RADIUS_PERCENT
+  );
+  const cornerRadiusRatio = getCornerRadiusRatio(cornerRadiusPercent);
 
   return {
     exportMode,
     svg: {
       bambuSafeMode: bambuSafeModeInput.checked,
-      mirror: mirrorOutputInput.checked,
-      moduleShape
+      mirror: getMirrorOutputEnabled(),
+      moduleShape,
+      cornerRadiusPercent,
+      cornerRadiusRatio
     },
     stl: {
       nozzleSize,
       layerHeight,
       moduleMultiplier,
       raisedLayerCount,
-      mirror: mirrorOutputInput.checked,
+      mirror: getMirrorOutputEnabled(),
       moduleShape,
+      cornerRadiusPercent,
+      cornerRadiusRatio,
       moduleSizeMm: nozzleSize * moduleMultiplier,
       qrHeightMm: layerHeight * raisedLayerCount
     }
@@ -956,10 +1043,374 @@ function usesRoundFinderPatterns(moduleShape) {
   return moduleShape === QR_MODULE_SHAPES.ROUND;
 }
 
+function usesRoundedSquareCorners(moduleShape, cornerRadiusRatio) {
+  return moduleShape === QR_MODULE_SHAPES.SQUARE && cornerRadiusRatio > 0;
+}
+
+function getMirrorOutputEnabled() {
+  if (!mirrorOutputInput) {
+    return false;
+  }
+
+  return mirrorOutputInput.value === "mirrored";
+}
+
+function updateCornerRadiusInputState() {
+  if (!cornerRadiusPercentInput || !moduleShapeInput) {
+    return;
+  }
+
+  const isDisabled = moduleShapeInput.value === QR_MODULE_SHAPES.ROUND;
+  cornerRadiusPercentInput.disabled = isDisabled;
+  cornerRadiusPercentInput
+    .closest(".shape-setting")
+    ?.classList.toggle("is-disabled", isDisabled);
+}
+
 function getModuleDrawColumn(totalModules, quietZoneModules, col, moduleSpan = 1, mirror = false) {
   return mirror
     ? totalModules - quietZoneModules - col - moduleSpan
     : col + quietZoneModules;
+}
+
+function isDarkModuleCell(moduleData, moduleCount, row, col) {
+  if (row < 0 || col < 0 || row >= moduleCount || col >= moduleCount) {
+    return false;
+  }
+
+  return Boolean(moduleData[row * moduleCount + col]);
+}
+
+function buildModuleBitmap(moduleData, moduleCount) {
+  const bitmap = [];
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    const rowValues = [];
+    for (let col = 0; col < moduleCount; col += 1) {
+      rowValues.push(Boolean(moduleData[row * moduleCount + col]));
+    }
+    bitmap.push(rowValues);
+  }
+
+  return bitmap;
+}
+
+function getBitmapCell(bitmap, row, col) {
+  if (row < 0 || col < 0 || row >= bitmap.length || col >= bitmap.length) {
+    return false;
+  }
+
+  return bitmap[row][col];
+}
+
+function isBitmapInBounds(bitmap, row, col) {
+  return row >= 0 && col >= 0 && row < bitmap.length && col < bitmap.length;
+}
+
+function getMaskedCornerConfigs(mask) {
+  return MODULE_CORNER_CONFIGS.filter(({ bit }) => (mask & bit) !== 0);
+}
+
+function getOutputCornerMask(mask, mirror = false) {
+  if (!mirror || !mask) {
+    return mask;
+  }
+
+  let mirroredMask = 0;
+
+  if (mask & MODULE_CORNER_BITS.TOP_LEFT) {
+    mirroredMask |= MODULE_CORNER_BITS.TOP_RIGHT;
+  }
+  if (mask & MODULE_CORNER_BITS.TOP_RIGHT) {
+    mirroredMask |= MODULE_CORNER_BITS.TOP_LEFT;
+  }
+  if (mask & MODULE_CORNER_BITS.BOTTOM_RIGHT) {
+    mirroredMask |= MODULE_CORNER_BITS.BOTTOM_LEFT;
+  }
+  if (mask & MODULE_CORNER_BITS.BOTTOM_LEFT) {
+    mirroredMask |= MODULE_CORNER_BITS.BOTTOM_RIGHT;
+  }
+
+  return mirroredMask;
+}
+
+function buildModuleCornerMaskBitmap(moduleData, moduleCount) {
+  const bitmap = buildModuleBitmap(moduleData, moduleCount);
+  const cornerMasks = Array.from({ length: moduleCount }, () => Array(moduleCount).fill(0));
+  const whiteCornerMasks = Array.from({ length: moduleCount }, () => Array(moduleCount).fill(0));
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      const current = bitmap[row][col];
+      let mask = 0;
+
+      for (const corner of MODULE_CORNER_CONFIGS) {
+        const sideA = getBitmapCell(bitmap, row + corner.sideA[0], col + corner.sideA[1]);
+        const sideB = getBitmapCell(bitmap, row + corner.sideB[0], col + corner.sideB[1]);
+
+        if (sideA !== current && sideB !== current) {
+          mask |= corner.bit;
+        }
+      }
+
+      cornerMasks[row][col] = mask;
+      let whiteMask = current ? 0 : mask;
+
+      // If the matching diagonal module is also white, suppress that white
+      // corner so diagonal white cells do not form a pinched shared corner.
+      if (!current) {
+        for (const corner of MODULE_CORNER_CONFIGS) {
+          const diagonalRow = row + corner.diagonal[0];
+          const diagonalCol = col + corner.diagonal[1];
+
+          if (isBitmapInBounds(bitmap, diagonalRow, diagonalCol) && !bitmap[diagonalRow][diagonalCol]) {
+            whiteMask &= ~corner.bit;
+          }
+        }
+      }
+
+      whiteCornerMasks[row][col] = whiteMask;
+    }
+  }
+
+  return {
+    bitmap,
+    cornerMasks,
+    whiteCornerMasks
+  };
+}
+
+function getModuleCornerRadiiFromMask(cornerMask, moduleSize, cornerRadiusRatio) {
+  const cornerRadius = moduleSize * cornerRadiusRatio;
+  const radii = {
+    topLeft: 0,
+    topRight: 0,
+    bottomRight: 0,
+    bottomLeft: 0
+  };
+
+  for (const corner of getMaskedCornerConfigs(cornerMask)) {
+    radii[corner.key] = cornerRadius;
+  }
+
+  return radii;
+}
+
+function buildRoundedModuleSvgPath(x, y, size, radii) {
+  const x1 = x + size;
+  const y1 = y + size;
+  const topLeft = radii.topLeft;
+  const topRight = radii.topRight;
+  const bottomRight = radii.bottomRight;
+  const bottomLeft = radii.bottomLeft;
+  const commands = [
+    `M${formatSvgNumber(x + topLeft)} ${formatSvgNumber(y)}`,
+    `H${formatSvgNumber(x1 - topRight)}`
+  ];
+
+  if (topRight > 0) {
+    commands.push(
+      `A${formatSvgNumber(topRight)} ${formatSvgNumber(topRight)} 0 0 1 ${formatSvgNumber(x1)} ${formatSvgNumber(y + topRight)}`
+    );
+  } else {
+    commands.push(`L${formatSvgNumber(x1)} ${formatSvgNumber(y)}`);
+  }
+
+  commands.push(`V${formatSvgNumber(y1 - bottomRight)}`);
+
+  if (bottomRight > 0) {
+    commands.push(
+      `A${formatSvgNumber(bottomRight)} ${formatSvgNumber(bottomRight)} 0 0 1 ${formatSvgNumber(x1 - bottomRight)} ${formatSvgNumber(y1)}`
+    );
+  } else {
+    commands.push(`L${formatSvgNumber(x1)} ${formatSvgNumber(y1)}`);
+  }
+
+  commands.push(`H${formatSvgNumber(x + bottomLeft)}`);
+
+  if (bottomLeft > 0) {
+    commands.push(
+      `A${formatSvgNumber(bottomLeft)} ${formatSvgNumber(bottomLeft)} 0 0 1 ${formatSvgNumber(x)} ${formatSvgNumber(y1 - bottomLeft)}`
+    );
+  } else {
+    commands.push(`L${formatSvgNumber(x)} ${formatSvgNumber(y1)}`);
+  }
+
+  commands.push(`V${formatSvgNumber(y + topLeft)}`);
+
+  if (topLeft > 0) {
+    commands.push(
+      `A${formatSvgNumber(topLeft)} ${formatSvgNumber(topLeft)} 0 0 1 ${formatSvgNumber(x + topLeft)} ${formatSvgNumber(y)}`
+    );
+  } else {
+    commands.push(`L${formatSvgNumber(x)} ${formatSvgNumber(y)}`);
+  }
+
+  commands.push("Z");
+  return commands.join("");
+}
+
+function appendRoundedCornerPolygonPoints(points, centerX, centerY, radius, startAngle, endAngle, segments) {
+  for (let index = 1; index <= segments; index += 1) {
+    const angle = startAngle + (((endAngle - startAngle) * index) / segments);
+    points.push([
+      centerX + (Math.cos(angle) * radius),
+      centerY + (Math.sin(angle) * radius)
+    ]);
+  }
+}
+
+function buildRoundedModulePolygonPoints(x, y, size, radii) {
+  const x1 = x + size;
+  const y1 = y + size;
+  const topLeft = radii.topLeft;
+  const topRight = radii.topRight;
+  const bottomRight = radii.bottomRight;
+  const bottomLeft = radii.bottomLeft;
+  const points = [];
+
+  points.push([x + topLeft, y]);
+  points.push([x1 - topRight, y]);
+
+  if (topRight > 0) {
+    appendRoundedCornerPolygonPoints(
+      points,
+      x1 - topRight,
+      y + topRight,
+      topRight,
+      -Math.PI / 2,
+      0,
+      MODULE_CORNER_SEGMENTS
+    );
+  } else {
+    points.push([x1, y]);
+  }
+
+  points.push([x1, y1 - bottomRight]);
+
+  if (bottomRight > 0) {
+    appendRoundedCornerPolygonPoints(
+      points,
+      x1 - bottomRight,
+      y1 - bottomRight,
+      bottomRight,
+      0,
+      Math.PI / 2,
+      MODULE_CORNER_SEGMENTS
+    );
+  } else {
+    points.push([x1, y1]);
+  }
+
+  points.push([x + bottomLeft, y1]);
+
+  if (bottomLeft > 0) {
+    appendRoundedCornerPolygonPoints(
+      points,
+      x + bottomLeft,
+      y1 - bottomLeft,
+      bottomLeft,
+      Math.PI / 2,
+      Math.PI,
+      MODULE_CORNER_SEGMENTS
+    );
+  } else {
+    points.push([x, y1]);
+  }
+
+  points.push([x, y + topLeft]);
+
+  if (topLeft > 0) {
+    appendRoundedCornerPolygonPoints(
+      points,
+      x + topLeft,
+      y + topLeft,
+      topLeft,
+      Math.PI,
+      (3 * Math.PI) / 2,
+      MODULE_CORNER_SEGMENTS
+    );
+  } else {
+    points.push([x, y]);
+  }
+
+  return cleanPolygonPoints(points);
+}
+
+function buildPolygonSvgPath(points) {
+  if (!points.length) {
+    return "";
+  }
+
+  const [firstX, firstY] = points[0];
+  const commands = [`M${formatSvgNumber(firstX)} ${formatSvgNumber(firstY)}`];
+
+  for (let index = 1; index < points.length; index += 1) {
+    const [pointX, pointY] = points[index];
+    commands.push(`L${formatSvgNumber(pointX)} ${formatSvgNumber(pointY)}`);
+  }
+
+  commands.push("Z");
+  return commands.join("");
+}
+
+function buildWhiteCornerFilletPolygonPoints(x, y, size, corner, cornerRadiusRatio) {
+  const radius = size * cornerRadiusRatio;
+
+  if (radius <= 0) {
+    return [];
+  }
+
+  const cornerX = x + (corner.corner[0] * size);
+  const cornerY = y + (corner.corner[1] * size);
+  const points = [];
+
+  points.push(
+    [cornerX, cornerY],
+    [cornerX + (corner.entry[0] * radius), cornerY + (corner.entry[1] * radius)]
+  );
+  appendRoundedCornerPolygonPoints(
+    points,
+    cornerX + (corner.center[0] * radius),
+    cornerY + (corner.center[1] * radius),
+    radius,
+    corner.arcStart,
+    corner.arcEnd,
+    MODULE_CORNER_SEGMENTS
+  );
+
+  return cleanPolygonPoints(points);
+}
+
+function buildWhiteCornerFilletPolygons(x, y, size, whiteCornerMask, cornerRadiusRatio) {
+  return getMaskedCornerConfigs(whiteCornerMask).map((corner) =>
+    buildWhiteCornerFilletPolygonPoints(x, y, size, corner, cornerRadiusRatio)
+  );
+}
+
+function buildWhiteCornerFilletSvgPath(x, y, size, whiteCornerMask, cornerRadiusRatio) {
+  if (!whiteCornerMask) {
+    return "";
+  }
+
+  return buildWhiteCornerFilletPolygons(x, y, size, whiteCornerMask, cornerRadiusRatio)
+    .map((points) => buildPolygonSvgPath(points))
+    .join("");
+}
+
+function appendWhiteCornerFilletFacets(facets, x, y, size, whiteCornerMask, baseZ, topZ, cornerRadiusRatio) {
+  if (!whiteCornerMask) {
+    return;
+  }
+
+  for (const points of buildWhiteCornerFilletPolygons(x, y, size, whiteCornerMask, cornerRadiusRatio)) {
+    appendPolygonPrismFacets(
+      facets,
+      points,
+      baseZ,
+      topZ
+    );
+  }
 }
 
 function isFinderPatternCell(row, col, moduleCount) {
@@ -1021,11 +1472,7 @@ function renderRoundQrModules(data, x, y, size, mirror = false) {
   return `<g fill="black">${circles.join("")}</g>`;
 }
 
-function renderQRModules(data, x, y, size, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
-  if (moduleShape === QR_MODULE_SHAPES.ROUND) {
-    return renderRoundQrModules(data, x, y, size, mirror);
-  }
-
+function renderSharpSquareQrModules(data, x, y, size, mirror = false) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const totalModules = moduleCount + quietZoneModules * 2;
   const moduleSize = size / totalModules;
@@ -1061,8 +1508,54 @@ function renderQRModules(data, x, y, size, mirror = false, moduleShape = QR_MODU
   return `<path d="${pathCommands.join("")}" fill="black"/>`;
 }
 
-function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
+function renderQRModules(data, x, y, size, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE, cornerRadiusRatio = 0) {
+  if (moduleShape === QR_MODULE_SHAPES.ROUND) {
+    return renderRoundQrModules(data, x, y, size, mirror);
+  }
+
+  if (!usesRoundedSquareCorners(moduleShape, cornerRadiusRatio)) {
+    return renderSharpSquareQrModules(data, x, y, size, mirror);
+  }
+
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const { cornerMasks, whiteCornerMasks } = buildModuleCornerMaskBitmap(moduleData, moduleCount);
+  const totalModules = moduleCount + quietZoneModules * 2;
+  const moduleSize = size / totalModules;
+  const pathCommands = [];
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (!moduleData[row * moduleCount + col]) continue;
+      const drawColumn = getModuleDrawColumn(totalModules, quietZoneModules, col, 1, mirror);
+      const moduleX = x + (drawColumn * moduleSize);
+      const moduleY = y + ((row + quietZoneModules) * moduleSize);
+      const cornerMask = getOutputCornerMask(cornerMasks[row][col], mirror);
+      const cornerRadii = getModuleCornerRadiiFromMask(cornerMask, moduleSize, cornerRadiusRatio);
+      pathCommands.push(buildRoundedModuleSvgPath(moduleX, moduleY, moduleSize, cornerRadii));
+    }
+  }
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (moduleData[row * moduleCount + col]) continue;
+      const whiteCornerMask = getOutputCornerMask(whiteCornerMasks[row][col], mirror);
+      if (!whiteCornerMask) continue;
+      const drawColumn = getModuleDrawColumn(totalModules, quietZoneModules, col, 1, mirror);
+      const moduleX = x + (drawColumn * moduleSize);
+      const moduleY = y + ((row + quietZoneModules) * moduleSize);
+      const filletPath = buildWhiteCornerFilletSvgPath(moduleX, moduleY, moduleSize, whiteCornerMask, cornerRadiusRatio);
+      if (filletPath) {
+        pathCommands.push(filletPath);
+      }
+    }
+  }
+
+  return `<path d="${pathCommands.join("")}" fill="black"/>`;
+}
+
+function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE, cornerRadiusRatio = 0) {
+  const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const { cornerMasks, whiteCornerMasks } = buildModuleCornerMaskBitmap(moduleData, moduleCount);
   const totalModules = moduleCount + (quietZoneModules * 2);
   const elements = [];
 
@@ -1076,10 +1569,35 @@ function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false, moduleSha
         elements.push(
             `<circle cx="${x + ((drawColumn + 0.5) * moduleSize)}" cy="${y + ((row + quietZoneModules + 0.5) * moduleSize)}" r="${moduleSize / 2}"/>`
         );
-      } else {
+      } else if (!usesRoundedSquareCorners(moduleShape, cornerRadiusRatio)) {
         elements.push(
           `<rect x="${x + (drawColumn * moduleSize)}" y="${y + ((row + quietZoneModules) * moduleSize)}" width="${moduleSize}" height="${moduleSize}"/>`
         );
+      } else {
+        const moduleX = x + (drawColumn * moduleSize);
+        const moduleY = y + ((row + quietZoneModules) * moduleSize);
+        const cornerMask = getOutputCornerMask(cornerMasks[row][col], mirror);
+        const cornerRadii = getModuleCornerRadiiFromMask(cornerMask, moduleSize, cornerRadiusRatio);
+        elements.push(
+          `<path d="${buildRoundedModuleSvgPath(moduleX, moduleY, moduleSize, cornerRadii)}"/>`
+        );
+      }
+    }
+  }
+
+  if (usesRoundedSquareCorners(moduleShape, cornerRadiusRatio)) {
+    for (let row = 0; row < moduleCount; row += 1) {
+      for (let col = 0; col < moduleCount; col += 1) {
+        if (moduleData[row * moduleCount + col]) continue;
+        const whiteCornerMask = getOutputCornerMask(whiteCornerMasks[row][col], mirror);
+        if (!whiteCornerMask) continue;
+        const drawColumn = getModuleDrawColumn(totalModules, quietZoneModules, col, 1, mirror);
+        const moduleX = x + (drawColumn * moduleSize);
+        const moduleY = y + ((row + quietZoneModules) * moduleSize);
+        const filletPath = buildWhiteCornerFilletSvgPath(moduleX, moduleY, moduleSize, whiteCornerMask, cornerRadiusRatio);
+        if (filletPath) {
+          elements.push(`<path d="${filletPath}"/>`);
+        }
       }
     }
   }
@@ -1095,8 +1613,8 @@ function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false, moduleSha
   };
 }
 
-function buildBambuSafeSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
-  const safeQR = renderBambuSafeQR(data, 0, 0, 4, mirror, moduleShape);
+function buildBambuSafeSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE, cornerRadiusRatio = 0) {
+  const safeQR = renderBambuSafeQR(data, 0, 0, 4, mirror, moduleShape, cornerRadiusRatio);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${safeQR.width}" height="${safeQR.height}" viewBox="0 0 ${safeQR.width} ${safeQR.height}"`
     : "";
@@ -1113,14 +1631,14 @@ function getQrCanvasSize(data, moduleSize = 4) {
   return (moduleCount + (quietZoneModules * 2)) * moduleSize;
 }
 
-function buildNormalQrSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
+function buildNormalQrSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE, cornerRadiusRatio = 0) {
   const size = getQrCanvasSize(data, 4);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"`
     : ` viewBox="0 0 ${size} ${size}"`;
 
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size, mirror, moduleShape)}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size, mirror, moduleShape, cornerRadiusRatio)}</svg>`,
     size
   };
 }
@@ -1333,6 +1851,114 @@ function isVisibleHoleBridge(outerPoints, holePoints, holeIndex, outerIndex, eps
   return true;
 }
 
+function getSignedPolygonArea(points) {
+  let area = 0;
+
+  for (let index = 0; index < points.length; index += 1) {
+    const [x1, y1] = points[index];
+    const [x2, y2] = points[(index + 1) % points.length];
+    area += (x1 * y2) - (x2 * y1);
+  }
+
+  return area / 2;
+}
+
+function isPointInsideTriangle(point, triangleA, triangleB, triangleC, epsilon = 1e-9) {
+  const turnAB = getTurnDirection(triangleA, triangleB, point, epsilon);
+  const turnBC = getTurnDirection(triangleB, triangleC, point, epsilon);
+  const turnCA = getTurnDirection(triangleC, triangleA, point, epsilon);
+  const hasNegative = turnAB < 0 || turnBC < 0 || turnCA < 0;
+  const hasPositive = turnAB > 0 || turnBC > 0 || turnCA > 0;
+
+  return !(hasNegative && hasPositive);
+}
+
+function triangulatePolygonPoints(points) {
+  const orderedPoints = cleanPolygonPoints(points);
+
+  if (orderedPoints.length < 3) {
+    throw new Error("Polygon must have at least three points.");
+  }
+
+  if (orderedPoints.length === 3) {
+    return {
+      orderedPoints,
+      triangles: [[0, 1, 2]]
+    };
+  }
+
+  const isCounterClockwise = getSignedPolygonArea(orderedPoints) > 0;
+  const remainingIndexes = orderedPoints.map((_, index) => index);
+  const triangles = [];
+  let guard = 0;
+  const maxGuard = orderedPoints.length * orderedPoints.length;
+
+  while (remainingIndexes.length > 3 && guard < maxGuard) {
+    guard += 1;
+    let earFound = false;
+
+    for (let index = 0; index < remainingIndexes.length; index += 1) {
+      const previousIndex = remainingIndexes[(index - 1 + remainingIndexes.length) % remainingIndexes.length];
+      const currentIndex = remainingIndexes[index];
+      const nextIndex = remainingIndexes[(index + 1) % remainingIndexes.length];
+      const previousPoint = orderedPoints[previousIndex];
+      const currentPoint = orderedPoints[currentIndex];
+      const nextPoint = orderedPoints[nextIndex];
+      const turn = getTurnDirection(previousPoint, currentPoint, nextPoint);
+
+      if (turn === 0) {
+        continue;
+      }
+
+      if ((isCounterClockwise && turn < 0) || (!isCounterClockwise && turn > 0)) {
+        continue;
+      }
+
+      let hasInteriorPoint = false;
+
+      for (const testIndex of remainingIndexes) {
+        if (testIndex === previousIndex || testIndex === currentIndex || testIndex === nextIndex) {
+          continue;
+        }
+
+        if (isPointInsideTriangle(orderedPoints[testIndex], previousPoint, currentPoint, nextPoint)) {
+          hasInteriorPoint = true;
+          break;
+        }
+      }
+
+      if (hasInteriorPoint) {
+        continue;
+      }
+
+      triangles.push([previousIndex, currentIndex, nextIndex]);
+      remainingIndexes.splice(index, 1);
+      earFound = true;
+      break;
+    }
+
+    if (!earFound) {
+      break;
+    }
+  }
+
+  if (remainingIndexes.length === 3) {
+    triangles.push([remainingIndexes[0], remainingIndexes[1], remainingIndexes[2]]);
+  }
+
+  if (triangles.length === 0) {
+    // Fallback to fan triangulation for highly degenerate cases.
+    for (let index = 1; index < orderedPoints.length - 1; index += 1) {
+      triangles.push([0, index, index + 1]);
+    }
+  }
+
+  return {
+    orderedPoints,
+    triangles
+  };
+}
+
 function appendPolygonPrismFacets(facets, points, baseZ, topZ) {
   const { orderedPoints, triangles } = triangulatePolygonPoints(points);
   const basePoints = orderedPoints.map(([pointX, pointY]) => [pointX, pointY, baseZ]);
@@ -1491,6 +2117,7 @@ function appendRoundFinderPatternFacets(facets, moduleSize, qrHeightMm, moduleCo
 
 function buildQrStl(data, settings) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const { cornerMasks, whiteCornerMasks } = buildModuleCornerMaskBitmap(moduleData, moduleCount);
   const moduleSizeMm = settings.moduleSizeMm;
   const facets = [];
   for (let row = 0; row < moduleCount; row += 1) {
@@ -1518,7 +2145,7 @@ function buildQrStl(data, settings) {
           0,
           settings.qrHeightMm
         );
-      } else {
+      } else if (!usesRoundedSquareCorners(settings.moduleShape, settings.cornerRadiusRatio)) {
         appendPrismFacets(
           facets,
           x,
@@ -1527,6 +2154,41 @@ function buildQrStl(data, settings) {
           moduleSizeMm,
           0,
           settings.qrHeightMm
+        );
+      } else {
+        const cornerMask = getOutputCornerMask(cornerMasks[row][col], settings.mirror);
+        const cornerRadii = getModuleCornerRadiiFromMask(cornerMask, moduleSizeMm, settings.cornerRadiusRatio);
+        const roundedPolygon = buildRoundedModulePolygonPoints(x, y, moduleSizeMm, cornerRadii);
+        appendPolygonPrismFacets(facets, roundedPolygon, 0, settings.qrHeightMm);
+      }
+    }
+  }
+
+  if (usesRoundedSquareCorners(settings.moduleShape, settings.cornerRadiusRatio)) {
+    for (let row = 0; row < moduleCount; row += 1) {
+      for (let col = 0; col < moduleCount; col += 1) {
+        if (moduleData[row * moduleCount + col]) continue;
+        const whiteCornerMask = getOutputCornerMask(whiteCornerMasks[row][col], settings.mirror);
+        if (!whiteCornerMask) continue;
+        const drawColumn = getModuleDrawColumn(
+          moduleCount + (quietZoneModules * 2),
+          quietZoneModules,
+          col,
+          1,
+          settings.mirror
+        );
+        const y = (row + quietZoneModules) * moduleSizeMm;
+        const x = drawColumn * moduleSizeMm;
+
+        appendWhiteCornerFilletFacets(
+          facets,
+          x,
+          y,
+          moduleSizeMm,
+          whiteCornerMask,
+          0,
+          settings.qrHeightMm,
+          settings.cornerRadiusRatio
         );
       }
     }
@@ -1564,7 +2226,7 @@ async function generateLabel() {
 
     if (selectedExportMode === "stl") {
       finalSTL = buildQrStl(data, stl);
-      const previewNormalSvg = buildNormalQrSvg(data, true, stl.mirror, stl.moduleShape);
+      const previewNormalSvg = buildNormalQrSvg(data, true, stl.mirror, stl.moduleShape, stl.cornerRadiusRatio);
       finalSVG = "";
       output.innerHTML = previewNormalSvg.svg;
       return;
@@ -1573,19 +2235,19 @@ async function generateLabel() {
     finalSTL = "";
 
     if (svg.bambuSafeMode) {
-      const downloadSafeSvg = buildBambuSafeSvg(data, false, svg.mirror, svg.moduleShape);
-      const previewSafeSvg = buildBambuSafeSvg(data, true, svg.mirror, svg.moduleShape);
+      const downloadSafeSvg = buildBambuSafeSvg(data, false, svg.mirror, svg.moduleShape, svg.cornerRadiusRatio);
+      const previewSafeSvg = buildBambuSafeSvg(data, true, svg.mirror, svg.moduleShape, svg.cornerRadiusRatio);
       finalSVG = downloadSafeSvg.svg;
       output.innerHTML = previewSafeSvg.svg;
       return;
     }
 
-    const downloadNormalSvg = buildNormalQrSvg(data, false, svg.mirror, svg.moduleShape);
-    const previewNormalSvg = buildNormalQrSvg(data, true, svg.mirror, svg.moduleShape);
+    const downloadNormalSvg = buildNormalQrSvg(data, false, svg.mirror, svg.moduleShape, svg.cornerRadiusRatio);
+    const previewNormalSvg = buildNormalQrSvg(data, true, svg.mirror, svg.moduleShape, svg.cornerRadiusRatio);
     finalSVG = downloadNormalSvg.svg;
     output.innerHTML = previewNormalSvg.svg;
   } catch (error) {
-    clearGeneratedOutput();
+    renderPreviewError(`Could not generate the QR label: ${error.message}`);
     setStatus(`Could not generate the QR label: ${error.message}`, true);
   }
 }
@@ -1680,6 +2342,7 @@ downloadStlBtn.addEventListener("click", downloadStl);
 
 for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput].filter(Boolean)) {
   input.addEventListener("change", () => {
+    updateCornerRadiusInputState();
     updateStlSummary();
     if (dataInput.value.trim()) {
       generateLabel();
@@ -1693,7 +2356,8 @@ for (const input of [
   nozzleSizeInput,
   layerHeightInput,
   moduleMultiplierInput,
-  raisedLayerCountInput
+  raisedLayerCountInput,
+  cornerRadiusPercentInput
 ].filter(Boolean)) {
   input.addEventListener("input", () => {
     updateStlSummary();
@@ -1705,6 +2369,7 @@ for (const input of [
 
 updateLookupButtonState();
 updateExportModeUi();
+updateCornerRadiusInputState();
 updateStlSummary();
 updatePayloadValidity("empty");
 setStatus("");

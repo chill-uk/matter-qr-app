@@ -93,7 +93,8 @@
       transition: border-color 140ms ease, box-shadow 140ms ease, transform 140ms ease;
     }
 
-    input:focus {
+    input:focus,
+    select:focus {
       outline: none;
       border-color: rgba(31, 106, 83, 0.55);
       box-shadow: 0 0 0 4px rgba(31, 106, 83, 0.12);
@@ -576,31 +577,35 @@
     }
 
     .preview-toolbar {
-      display: flex;
-      justify-content: flex-start;
-      align-items: end;
-      flex-wrap: wrap;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      align-items: start;
       gap: 16px;
     }
 
     .preview-card .shape-setting {
-      width: min(100%, 280px);
+      width: 100%;
       margin: 0;
+      align-content: start;
     }
 
-    .preview-toggle {
-      display: inline-flex;
-      align-items: center;
-      gap: 10px;
-      min-height: 48px;
-      color: var(--muted);
-      font-size: 0.92rem;
-      font-weight: 700;
-      white-space: nowrap;
+    .preview-toolbar .shape-setting .plain-control {
+      all: revert;
+      display: block;
+      box-sizing: border-box;
+      width: 100%;
+      height: 2.5rem;
+      margin: 0;
+      font: inherit;
+      color: inherit;
     }
 
-    .preview-toggle input {
-      margin: 0;
+    .preview-toolbar .shape-setting .plain-control:focus {
+      outline: auto;
+    }
+
+    .shape-setting.is-disabled {
+      opacity: 0.58;
     }
 
     .preview-pane {
@@ -632,6 +637,20 @@
       place-items: center;
       min-height: 320px;
       padding: 8px;
+    }
+
+    .preview-error {
+      width: 100%;
+      max-width: 520px;
+      padding: 14px 16px;
+      border: 1px solid rgba(185, 72, 58, 0.24);
+      border-radius: 14px;
+      background: rgba(255, 240, 238, 0.96);
+      color: #9b3125;
+      font-size: 0.92rem;
+      font-weight: 700;
+      line-height: 1.45;
+      text-align: left;
     }
 
     .preview-actions {
@@ -750,11 +769,8 @@
       }
 
       .preview-toolbar {
+        grid-template-columns: 1fr;
         align-items: stretch;
-      }
-
-      .preview-toggle {
-        white-space: normal;
       }
 
       .preview-actions {
@@ -887,12 +903,22 @@
         <div class="preview-toolbar">
           <div class="shape-setting">
             <label for="moduleShape">QR Module Shape</label>
-            <select id="moduleShape">
+            <select id="moduleShape" class="plain-control">
               <option value="square">Square</option>
               <option value="round">Round Dots</option>
             </select>
           </div>
-          <label class="preview-toggle"><input type="checkbox" id="mirrorOutput" /> Mirror For Underside Prints</label>
+          <div class="shape-setting">
+            <label for="cornerRadiusPercent">Corner Radius (%)</label>
+            <input id="cornerRadiusPercent" class="plain-control" type="number" min="0" max="100" step="5" value="50" />
+          </div>
+          <div class="shape-setting">
+            <label for="mirrorOutput">Print Orientation</label>
+            <select id="mirrorOutput" class="plain-control">
+              <option value="normal">Standard</option>
+              <option value="mirrored">Underside / Mirrored</option>
+            </select>
+          </div>
         </div>
         <div class="preview-pane">
           <div class="preview-surface">
@@ -941,6 +967,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260409-2"></script>
+<script type="module" src="app.js?v=20260409-30"></script>
 </body>
 </html>
