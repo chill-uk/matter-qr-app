@@ -635,7 +635,13 @@ function updateStlSummary() {
     ])
   );
 
-  stlSummary.replaceChildren(...summaryLines);
+  while (stlSummary.firstChild) {
+    stlSummary.removeChild(stlSummary.firstChild);
+  }
+
+  for (const line of summaryLines) {
+    stlSummary.appendChild(line);
+  }
 }
 
 function parsePositiveNumber(value, fallback) {

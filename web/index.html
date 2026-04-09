@@ -25,6 +25,10 @@
 
     * { box-sizing: border-box; }
 
+    [hidden] {
+      display: none !important;
+    }
+
     body {
       margin: 0;
       padding: 32px 18px 56px;
@@ -655,8 +659,8 @@
 
     svg {
       display: block;
-      max-width: 100%;
-      width: min(100%, 520px);
+      width: 100%;
+      max-width: 520px;
       height: auto;
       margin: 0 auto;
       border: 1px solid rgba(39, 33, 27, 0.12);
