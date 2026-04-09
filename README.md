@@ -2,6 +2,10 @@
 
 A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting an SVG / STL QR label for transplanting onto 3D-printed models.
 
+Checl it out here: [matterqr.codes](https://generate.matterqr.codes)
+
+Or you can grab the docker image and self-host it. (Instructions at the end)
+
 ## Why
 
 I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). The QR code is stored on the outer body and, without it, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
