@@ -22,12 +22,12 @@ const stlExportSection = document.getElementById("stlExportSection");
 const downloadBtn = document.getElementById("downloadBtn");
 const downloadStlBtn = document.getElementById("downloadStlBtn");
 const bambuSafeModeInput = document.getElementById("bambuSafeMode");
-const mirrorSvgInput = document.getElementById("mirrorSvg");
+const mirrorOutputInput = document.getElementById("mirrorOutput");
+const moduleShapeInput = document.getElementById("moduleShape");
 const nozzleSizeInput = document.getElementById("nozzleSize");
 const layerHeightInput = document.getElementById("layerHeight");
 const moduleMultiplierInput = document.getElementById("moduleMultiplier");
 const raisedLayerCountInput = document.getElementById("raisedLayerCount");
-const mirrorStlInput = document.getElementById("mirrorStl");
 const stlSummary = document.getElementById("stlSummary");
 const MATTER_QR_PREFIX = "MT:";
 const MATTER_BASE38_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.";
@@ -35,6 +35,11 @@ const STANDARD_COMMISSIONING_FLOW = 0;
 const MATTER_LONG_TO_SHORT_DISCRIMINATOR_SHIFT = 8;
 const DCL_PROXY_BASE = "/api/dcl";
 const QR_QUIET_ZONE_MODULES = 4;
+const QR_MODULE_SHAPES = {
+  SQUARE: "square",
+  ROUND: "round"
+};
+const ROUND_STL_SEGMENTS = 48;
 const KNOWN_VENDOR_NAMES = {
   4476: "IKEA of Sweden"
 };
@@ -164,8 +169,8 @@ function updateExportModeUi() {
   stlModeBtn.tabIndex = isSvgMode ? -1 : 0;
   svgExportSection.hidden = !isSvgMode;
   stlExportSection.hidden = isSvgMode;
-  svgExportSection.style.display = isSvgMode ? "" : "none";
-  stlExportSection.style.display = isSvgMode ? "none" : "";
+  downloadBtn.hidden = !isSvgMode;
+  downloadStlBtn.hidden = isSvgMode;
 }
 
 function formatCommissioningFlow(value) {
@@ -574,30 +579,63 @@ function clearGeneratedOutput() {
   finalSTL = "";
 }
 
+function buildStlSummaryLine(parts) {
+  const line = document.createElement("div");
+
+  for (const part of parts) {
+    if (part.strong) {
+      const strong = document.createElement("strong");
+      strong.textContent = part.strong;
+      line.append(strong);
+      continue;
+    }
+
+    line.append(part.text ?? "");
+  }
+
+  return line;
+}
+
 function updateStlSummary() {
   const { stl } = getExportOptions();
-  const summaryParts = [
-    `Each QR square will be <strong>${formatMillimeters(stl.moduleSizeMm)}</strong>.`,
-    `The QR will be <strong>${formatMillimeters(stl.qrHeightMm)}</strong> tall.`
+  const summaryLines = [
+    buildStlSummaryLine([
+      { text: "Each QR square will be " },
+      { strong: formatMillimeters(stl.moduleSizeMm) },
+      { text: "." }
+    ]),
+    buildStlSummaryLine([
+      { text: "The QR will be " },
+      { strong: formatMillimeters(stl.qrHeightMm) },
+      { text: " tall." }
+    ])
   ];
   const data = getNormalizedMatterQrText(dataInput.value);
 
   if (data) {
     try {
       const overallSize = getQrCanvasSize(data, stl.moduleSizeMm);
-      summaryParts.push(`The full QR will be about <strong>${formatMillimeters(overallSize)} x ${formatMillimeters(overallSize)}</strong>.`);
+      summaryLines.push(buildStlSummaryLine([
+        { text: "The full QR will be about " },
+        { strong: `${formatMillimeters(overallSize)} x ${formatMillimeters(overallSize)}` },
+        { text: "." }
+      ]));
     } catch {
       // Ignore invalid data here. The main generator will surface a clearer error.
     }
   }
 
-  summaryParts.push(
-    stl.mirror
-      ? "Mirroring is enabled for underside printing."
-      : "Mirroring is currently off."
+  summaryLines.push(
+    buildStlSummaryLine([
+      {
+        text: stl.mirror
+          ? "Mirroring is enabled for underside printing."
+          : "Mirroring is currently off."
+      }
+    ])
   );
 
-  stlSummary.innerHTML = summaryParts.join(" ");
+  stlSummary.replaceChildren(...summaryLines);
 }
 
 function parsePositiveNumber(value, fallback) {
@@ -828,19 +866,24 @@ function getExportOptions() {
   const layerHeight = parsePositiveNumber(layerHeightInput.value, 0.2);
   const moduleMultiplier = parsePositiveInteger(moduleMultiplierInput.value, 4);
   const raisedLayerCount = parsePositiveInteger(raisedLayerCountInput.value, 2);
+  const moduleShape = Object.values(QR_MODULE_SHAPES).includes(moduleShapeInput.value)
+    ? moduleShapeInput.value
+    : QR_MODULE_SHAPES.SQUARE;
 
   return {
     exportMode,
     svg: {
       bambuSafeMode: bambuSafeModeInput.checked,
-      mirror: mirrorSvgInput.checked
+      mirror: mirrorOutputInput.checked,
+      moduleShape
     },
     stl: {
       nozzleSize,
       layerHeight,
       moduleMultiplier,
       raisedLayerCount,
-      mirror: mirrorStlInput.checked,
+      mirror: mirrorOutputInput.checked,
+      moduleShape,
       moduleSizeMm: nozzleSize * moduleMultiplier,
       qrHeightMm: layerHeight * raisedLayerCount
     }
@@ -895,7 +938,88 @@ function getQrDefinition(data) {
   };
 }
 
-function renderQRModules(data, x, y, size, mirror = false) {
+function getFinderPatternOrigins(moduleCount) {
+  return [
+    { row: 0, col: 0 },
+    { row: 0, col: moduleCount - 7 },
+    { row: moduleCount - 7, col: 0 }
+  ];
+}
+
+function usesRoundFinderPatterns(moduleShape) {
+  return moduleShape === QR_MODULE_SHAPES.ROUND;
+}
+
+function getModuleDrawColumn(totalModules, quietZoneModules, col, moduleSpan = 1, mirror = false) {
+  return mirror
+    ? totalModules - quietZoneModules - col - moduleSpan
+    : col + quietZoneModules;
+}
+
+function isFinderPatternCell(row, col, moduleCount) {
+  return getFinderPatternOrigins(moduleCount).some((origin) =>
+    row >= origin.row &&
+    row < origin.row + 7 &&
+    col >= origin.col &&
+    col < origin.col + 7
+  );
+}
+
+function renderRoundFinderPatterns(x, y, moduleSize, moduleCount, mirror = false) {
+  const totalModules = moduleCount + QR_QUIET_ZONE_MODULES * 2;
+  const finderPatterns = [];
+
+  for (const origin of getFinderPatternOrigins(moduleCount)) {
+    const drawColumn = mirror
+      ? totalModules - QR_QUIET_ZONE_MODULES - origin.col - 7
+      : origin.col + QR_QUIET_ZONE_MODULES;
+    const centerX = x + ((drawColumn + 3.5) * moduleSize);
+    const centerY = y + ((origin.row + QR_QUIET_ZONE_MODULES + 3.5) * moduleSize);
+
+    finderPatterns.push(
+      `<circle cx="${formatSvgNumber(centerX)}" cy="${formatSvgNumber(centerY)}" r="${formatSvgNumber(3 * moduleSize)}" fill="none" stroke="black" stroke-width="${formatSvgNumber(moduleSize)}"/>`
+    );
+    finderPatterns.push(
+      `<circle cx="${formatSvgNumber(centerX)}" cy="${formatSvgNumber(centerY)}" r="${formatSvgNumber(1.5 * moduleSize)}" fill="black"/>`
+    );
+  }
+
+  return finderPatterns.join("");
+}
+
+function renderRoundQrModules(data, x, y, size, mirror = false) {
+  const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
+  const totalModules = moduleCount + quietZoneModules * 2;
+  const moduleSize = size / totalModules;
+  const circles = [];
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (!moduleData[row * moduleCount + col]) continue;
+      if (isFinderPatternCell(row, col, moduleCount)) continue;
+
+      const drawColumn = mirror
+        ? totalModules - quietZoneModules - col - 1
+        : col + quietZoneModules;
+      const centerX = x + ((drawColumn + 0.5) * moduleSize);
+      const centerY = y + ((row + quietZoneModules + 0.5) * moduleSize);
+
+      circles.push(
+        `<circle cx="${formatSvgNumber(centerX)}" cy="${formatSvgNumber(centerY)}" r="${formatSvgNumber(moduleSize / 2)}"/>`
+      );
+    }
+  }
+
+  circles.push(renderRoundFinderPatterns(x, y, moduleSize, moduleCount, mirror));
+
+  return `<g fill="black">${circles.join("")}</g>`;
+}
+
+function renderQRModules(data, x, y, size, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
+  if (moduleShape === QR_MODULE_SHAPES.ROUND) {
+    return renderRoundQrModules(data, x, y, size, mirror);
+  }
+
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const totalModules = moduleCount + quietZoneModules * 2;
   const moduleSize = size / totalModules;
@@ -931,39 +1055,48 @@ function renderQRModules(data, x, y, size, mirror = false) {
   return `<path d="${pathCommands.join("")}" fill="black"/>`;
 }
 
-function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false) {
+function renderBambuSafeQR(data, x, y, moduleSize = 4, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const totalModules = moduleCount + (quietZoneModules * 2);
-  const rects = [];
+  const elements = [];
 
   for (let row = 0; row < moduleCount; row += 1) {
     for (let col = 0; col < moduleCount; col += 1) {
       if (!moduleData[row * moduleCount + col]) continue;
+      if (usesRoundFinderPatterns(moduleShape) && isFinderPatternCell(row, col, moduleCount)) continue;
 
-      const drawColumn = mirror
-        ? totalModules - quietZoneModules - col - 1
-        : col + quietZoneModules;
-      rects.push(
-        `<rect x="${x + (drawColumn * moduleSize)}" y="${y + ((row + quietZoneModules) * moduleSize)}" width="${moduleSize}" height="${moduleSize}"/>`
-      );
+      const drawColumn = getModuleDrawColumn(totalModules, quietZoneModules, col, 1, mirror);
+      if (moduleShape === QR_MODULE_SHAPES.ROUND) {
+        elements.push(
+            `<circle cx="${x + ((drawColumn + 0.5) * moduleSize)}" cy="${y + ((row + quietZoneModules + 0.5) * moduleSize)}" r="${moduleSize / 2}"/>`
+        );
+      } else {
+        elements.push(
+          `<rect x="${x + (drawColumn * moduleSize)}" y="${y + ((row + quietZoneModules) * moduleSize)}" width="${moduleSize}" height="${moduleSize}"/>`
+        );
+      }
     }
   }
 
+  if (usesRoundFinderPatterns(moduleShape)) {
+    elements.push(renderRoundFinderPatterns(x, y, moduleSize, moduleCount, mirror));
+  }
+
   return {
-    svg: rects.join(""),
+    svg: elements.join(""),
     width: totalModules * moduleSize,
     height: totalModules * moduleSize
   };
 }
 
-function buildBambuSafeSvg(data, includeSizingMetadata, mirror = false) {
-  const safeQR = renderBambuSafeQR(data, 0, 0, 4, mirror);
+function buildBambuSafeSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
+  const safeQR = renderBambuSafeQR(data, 0, 0, 4, mirror, moduleShape);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${safeQR.width}" height="${safeQR.height}" viewBox="0 0 ${safeQR.width} ${safeQR.height}"`
     : "";
 
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${safeQR.svg}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}><g fill="black">${safeQR.svg}</g></svg>`,
     width: safeQR.width,
     height: safeQR.height
   };
@@ -974,14 +1107,14 @@ function getQrCanvasSize(data, moduleSize = 4) {
   return (moduleCount + (quietZoneModules * 2)) * moduleSize;
 }
 
-function buildNormalQrSvg(data, includeSizingMetadata, mirror = false) {
+function buildNormalQrSvg(data, includeSizingMetadata, mirror = false, moduleShape = QR_MODULE_SHAPES.SQUARE) {
   const size = getQrCanvasSize(data, 4);
   const sizeAttributes = includeSizingMetadata
     ? ` width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"`
     : ` viewBox="0 0 ${size} ${size}"`;
 
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size, mirror)}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg"${sizeAttributes}>${renderQRModules(data, 0, 0, size, mirror, moduleShape)}</svg>`,
     size
   };
 }
@@ -1027,34 +1160,380 @@ function appendPrismFacets(facets, x, y, width, height, baseZ, topZ) {
   facets.push(buildStlFacet(["-1", "0", "0"], [p010, p001, p011]));
 }
 
+function pointsAlmostEqual(pointA, pointB, epsilon = 1e-9) {
+  return Math.abs(pointA[0] - pointB[0]) < epsilon && Math.abs(pointA[1] - pointB[1]) < epsilon;
+}
+
+function cleanPolygonPoints(points, epsilon = 1e-9) {
+  if (points.length <= 3) {
+    return points;
+  }
+
+  const uniquePoints = [];
+
+  for (const point of points) {
+    if (uniquePoints.length === 0 || !pointsAlmostEqual(uniquePoints[uniquePoints.length - 1], point, epsilon)) {
+      uniquePoints.push(point);
+    }
+  }
+
+  if (uniquePoints.length > 1 && pointsAlmostEqual(uniquePoints[0], uniquePoints[uniquePoints.length - 1], epsilon)) {
+    uniquePoints.pop();
+  }
+
+  if (uniquePoints.length <= 3) {
+    return uniquePoints;
+  }
+
+  const cleanedPoints = [];
+
+  for (let index = 0; index < uniquePoints.length; index += 1) {
+    const previousPoint = uniquePoints[(index - 1 + uniquePoints.length) % uniquePoints.length];
+    const currentPoint = uniquePoints[index];
+    const nextPoint = uniquePoints[(index + 1) % uniquePoints.length];
+    const edgeAX = currentPoint[0] - previousPoint[0];
+    const edgeAY = currentPoint[1] - previousPoint[1];
+    const edgeBX = nextPoint[0] - currentPoint[0];
+    const edgeBY = nextPoint[1] - currentPoint[1];
+    const cross = (edgeAX * edgeBY) - (edgeAY * edgeBX);
+    const dot = (edgeAX * edgeBX) + (edgeAY * edgeBY);
+
+    if (Math.abs(cross) < epsilon && dot >= 0) {
+      continue;
+    }
+
+    cleanedPoints.push(currentPoint);
+  }
+
+  return cleanedPoints.length >= 3 ? cleanedPoints : uniquePoints;
+}
+
+function pointOnSegment(point, segmentStart, segmentEnd, epsilon = 1e-9) {
+  const segmentDX = segmentEnd[0] - segmentStart[0];
+  const segmentDY = segmentEnd[1] - segmentStart[1];
+  const pointDX = point[0] - segmentStart[0];
+  const pointDY = point[1] - segmentStart[1];
+  const cross = (segmentDX * pointDY) - (segmentDY * pointDX);
+
+  if (Math.abs(cross) > epsilon) {
+    return false;
+  }
+
+  const dot = (pointDX * segmentDX) + (pointDY * segmentDY);
+  if (dot < -epsilon) {
+    return false;
+  }
+
+  const squaredLength = (segmentDX * segmentDX) + (segmentDY * segmentDY);
+  return dot <= squaredLength + epsilon;
+}
+
+function getTurnDirection(pointA, pointB, pointC, epsilon = 1e-9) {
+  const cross = ((pointB[0] - pointA[0]) * (pointC[1] - pointA[1])) - ((pointB[1] - pointA[1]) * (pointC[0] - pointA[0]));
+
+  if (Math.abs(cross) < epsilon) {
+    return 0;
+  }
+
+  return cross > 0 ? 1 : -1;
+}
+
+function segmentsIntersect(pointA, pointB, pointC, pointD, epsilon = 1e-9) {
+  const turnA = getTurnDirection(pointA, pointB, pointC, epsilon);
+  const turnB = getTurnDirection(pointA, pointB, pointD, epsilon);
+  const turnC = getTurnDirection(pointC, pointD, pointA, epsilon);
+  const turnD = getTurnDirection(pointC, pointD, pointB, epsilon);
+
+  if (turnA !== turnB && turnC !== turnD) {
+    return true;
+  }
+
+  if (turnA === 0 && pointOnSegment(pointC, pointA, pointB, epsilon)) return true;
+  if (turnB === 0 && pointOnSegment(pointD, pointA, pointB, epsilon)) return true;
+  if (turnC === 0 && pointOnSegment(pointA, pointC, pointD, epsilon)) return true;
+  if (turnD === 0 && pointOnSegment(pointB, pointC, pointD, epsilon)) return true;
+
+  return false;
+}
+
+function isPointInsidePolygon(point, polygon, epsilon = 1e-9) {
+  let inside = false;
+
+  for (let index = 0; index < polygon.length; index += 1) {
+    const currentPoint = polygon[index];
+    const nextPoint = polygon[(index + 1) % polygon.length];
+
+    if (pointOnSegment(point, currentPoint, nextPoint, epsilon)) {
+      return true;
+    }
+
+    const crossesRay = ((currentPoint[1] > point[1]) !== (nextPoint[1] > point[1])) &&
+      (point[0] < (((nextPoint[0] - currentPoint[0]) * (point[1] - currentPoint[1])) / ((nextPoint[1] - currentPoint[1]) || epsilon)) + currentPoint[0]);
+
+    if (crossesRay) {
+      inside = !inside;
+    }
+  }
+
+  return inside;
+}
+
+function isVisibleHoleBridge(outerPoints, holePoints, holeIndex, outerIndex, epsilon = 1e-9) {
+  const holePoint = holePoints[holeIndex];
+  const outerPoint = outerPoints[outerIndex];
+
+  if (outerPoint[0] <= holePoint[0] + epsilon) {
+    return false;
+  }
+
+  const midpoint = [
+    (holePoint[0] + outerPoint[0]) / 2,
+    (holePoint[1] + outerPoint[1]) / 2
+  ];
+
+  if (!isPointInsidePolygon(midpoint, outerPoints, epsilon)) {
+    return false;
+  }
+
+  for (let index = 0; index < outerPoints.length; index += 1) {
+    const edgeStart = outerPoints[index];
+    const edgeEnd = outerPoints[(index + 1) % outerPoints.length];
+
+    if (pointsAlmostEqual(edgeStart, outerPoint, epsilon) || pointsAlmostEqual(edgeEnd, outerPoint, epsilon)) {
+      continue;
+    }
+
+    if (segmentsIntersect(holePoint, outerPoint, edgeStart, edgeEnd, epsilon)) {
+      return false;
+    }
+  }
+
+  for (let index = 0; index < holePoints.length; index += 1) {
+    const edgeStart = holePoints[index];
+    const edgeEnd = holePoints[(index + 1) % holePoints.length];
+
+    if (
+      pointsAlmostEqual(edgeStart, holePoint, epsilon) ||
+      pointsAlmostEqual(edgeEnd, holePoint, epsilon)
+    ) {
+      continue;
+    }
+
+    if (segmentsIntersect(holePoint, outerPoint, edgeStart, edgeEnd, epsilon)) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+function appendPolygonPrismFacets(facets, points, baseZ, topZ) {
+  const { orderedPoints, triangles } = triangulatePolygonPoints(points);
+  const basePoints = orderedPoints.map(([pointX, pointY]) => [pointX, pointY, baseZ]);
+  const topPoints = orderedPoints.map(([pointX, pointY]) => [pointX, pointY, topZ]);
+
+  for (const [firstIndex, secondIndex, thirdIndex] of triangles) {
+    facets.push(buildStlFacet(["0", "0", "-1"], [basePoints[firstIndex], basePoints[thirdIndex], basePoints[secondIndex]]));
+    facets.push(buildStlFacet(["0", "0", "1"], [topPoints[firstIndex], topPoints[secondIndex], topPoints[thirdIndex]]));
+  }
+
+  for (let index = 0; index < orderedPoints.length; index += 1) {
+    const nextIndex = (index + 1) % orderedPoints.length;
+    const currentBase = basePoints[index];
+    const nextBase = basePoints[nextIndex];
+    const currentTop = topPoints[index];
+    const nextTop = topPoints[nextIndex];
+    const edgeX = nextBase[0] - currentBase[0];
+    const edgeY = nextBase[1] - currentBase[1];
+    const edgeLength = Math.hypot(edgeX, edgeY) || 1;
+    const normal = [
+      formatStlNumber(edgeY / edgeLength),
+      formatStlNumber(-edgeX / edgeLength),
+      "0"
+    ];
+
+    facets.push(buildStlFacet(normal, [currentBase, nextBase, nextTop]));
+    facets.push(buildStlFacet(normal, [currentBase, nextTop, currentTop]));
+  }
+}
+
+function appendRoundPrismFacets(facets, centerX, centerY, radius, sides, baseZ, topZ) {
+  const baseCenter = [centerX, centerY, baseZ];
+  const topCenter = [centerX, centerY, topZ];
+  const basePoints = [];
+  const topPoints = [];
+
+  for (let index = 0; index < sides; index += 1) {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / sides);
+    const pointX = centerX + (Math.cos(angle) * radius);
+    const pointY = centerY + (Math.sin(angle) * radius);
+    basePoints.push([pointX, pointY, baseZ]);
+    topPoints.push([pointX, pointY, topZ]);
+  }
+
+  for (let index = 0; index < sides; index += 1) {
+    const nextIndex = (index + 1) % sides;
+    facets.push(buildStlFacet(["0", "0", "-1"], [baseCenter, basePoints[nextIndex], basePoints[index]]));
+    facets.push(buildStlFacet(["0", "0", "1"], [topCenter, topPoints[index], topPoints[nextIndex]]));
+  }
+
+  for (let index = 0; index < sides; index += 1) {
+    const nextIndex = (index + 1) % sides;
+    const currentBase = basePoints[index];
+    const nextBase = basePoints[nextIndex];
+    const currentTop = topPoints[index];
+    const nextTop = topPoints[nextIndex];
+    const midX = ((currentBase[0] + nextBase[0]) / 2) - centerX;
+    const midY = ((currentBase[1] + nextBase[1]) / 2) - centerY;
+    const length = Math.hypot(midX, midY) || 1;
+    const normal = [
+      formatStlNumber(midX / length),
+      formatStlNumber(midY / length),
+      "0"
+    ];
+
+    facets.push(buildStlFacet(normal, [currentBase, nextBase, nextTop]));
+    facets.push(buildStlFacet(normal, [currentBase, nextTop, currentTop]));
+  }
+}
+
+function appendRingPrismFacets(facets, centerX, centerY, outerRadius, innerRadius, sides, baseZ, topZ) {
+  const outerBasePoints = [];
+  const outerTopPoints = [];
+  const innerBasePoints = [];
+  const innerTopPoints = [];
+
+  for (let index = 0; index < sides; index += 1) {
+    const angle = (-Math.PI / 2) + ((Math.PI * 2 * index) / sides);
+    const cos = Math.cos(angle);
+    const sin = Math.sin(angle);
+    outerBasePoints.push([centerX + (cos * outerRadius), centerY + (sin * outerRadius), baseZ]);
+    outerTopPoints.push([centerX + (cos * outerRadius), centerY + (sin * outerRadius), topZ]);
+    innerBasePoints.push([centerX + (cos * innerRadius), centerY + (sin * innerRadius), baseZ]);
+    innerTopPoints.push([centerX + (cos * innerRadius), centerY + (sin * innerRadius), topZ]);
+  }
+
+  for (let index = 0; index < sides; index += 1) {
+    const nextIndex = (index + 1) % sides;
+    const outerBase = outerBasePoints[index];
+    const outerBaseNext = outerBasePoints[nextIndex];
+    const outerTop = outerTopPoints[index];
+    const outerTopNext = outerTopPoints[nextIndex];
+    const innerBase = innerBasePoints[index];
+    const innerBaseNext = innerBasePoints[nextIndex];
+    const innerTop = innerTopPoints[index];
+    const innerTopNext = innerTopPoints[nextIndex];
+    const outerMidX = ((outerBase[0] + outerBaseNext[0]) / 2) - centerX;
+    const outerMidY = ((outerBase[1] + outerBaseNext[1]) / 2) - centerY;
+    const outerLength = Math.hypot(outerMidX, outerMidY) || 1;
+    const innerMidX = ((innerBase[0] + innerBaseNext[0]) / 2) - centerX;
+    const innerMidY = ((innerBase[1] + innerBaseNext[1]) / 2) - centerY;
+    const innerLength = Math.hypot(innerMidX, innerMidY) || 1;
+    const outerNormal = [
+      formatStlNumber(outerMidX / outerLength),
+      formatStlNumber(outerMidY / outerLength),
+      "0"
+    ];
+    const innerNormal = [
+      formatStlNumber(-innerMidX / innerLength),
+      formatStlNumber(-innerMidY / innerLength),
+      "0"
+    ];
+
+    facets.push(buildStlFacet(["0", "0", "-1"], [outerBase, innerBaseNext, innerBase]));
+    facets.push(buildStlFacet(["0", "0", "-1"], [outerBase, outerBaseNext, innerBaseNext]));
+    facets.push(buildStlFacet(["0", "0", "1"], [outerTop, innerTop, innerTopNext]));
+    facets.push(buildStlFacet(["0", "0", "1"], [outerTop, innerTopNext, outerTopNext]));
+    facets.push(buildStlFacet(outerNormal, [outerBase, outerBaseNext, outerTopNext]));
+    facets.push(buildStlFacet(outerNormal, [outerBase, outerTopNext, outerTop]));
+    facets.push(buildStlFacet(innerNormal, [innerBase, innerTopNext, innerBaseNext]));
+    facets.push(buildStlFacet(innerNormal, [innerBase, innerTop, innerTopNext]));
+  }
+}
+
+function appendRoundFinderPatternFacets(facets, moduleSize, qrHeightMm, moduleCount, mirror = false) {
+  const totalModules = moduleCount + QR_QUIET_ZONE_MODULES * 2;
+
+  for (const origin of getFinderPatternOrigins(moduleCount)) {
+    const drawColumn = mirror
+      ? totalModules - QR_QUIET_ZONE_MODULES - origin.col - 7
+      : origin.col + QR_QUIET_ZONE_MODULES;
+    const centerX = (drawColumn + 3.5) * moduleSize;
+    const centerY = (origin.row + QR_QUIET_ZONE_MODULES + 3.5) * moduleSize;
+
+    appendRingPrismFacets(
+      facets,
+      centerX,
+      centerY,
+      3.5 * moduleSize,
+      2.5 * moduleSize,
+      ROUND_STL_SEGMENTS,
+      0,
+      qrHeightMm
+    );
+    appendRoundPrismFacets(
+      facets,
+      centerX,
+      centerY,
+      1.5 * moduleSize,
+      ROUND_STL_SEGMENTS,
+      0,
+      qrHeightMm
+    );
+  }
+}
+
 function buildQrStl(data, settings) {
   const { moduleCount, moduleData, quietZoneModules } = getQrDefinition(data);
   const moduleSizeMm = settings.moduleSizeMm;
   const facets = [];
-  const xOffset = settings.mirror
-    ? (moduleCount + (quietZoneModules * 2)) * moduleSizeMm
-    : 0;
-
   for (let row = 0; row < moduleCount; row += 1) {
     for (let col = 0; col < moduleCount; col += 1) {
       if (!moduleData[row * moduleCount + col]) continue;
+      if (usesRoundFinderPatterns(settings.moduleShape) && isFinderPatternCell(row, col, moduleCount)) continue;
 
-      const rawX = (col + quietZoneModules) * moduleSizeMm;
-      const y = (row + quietZoneModules) * moduleSizeMm;
-      const x = settings.mirror
-        ? xOffset - rawX - moduleSizeMm
-        : rawX;
-
-      appendPrismFacets(
-        facets,
-        x,
-        y,
-        moduleSizeMm,
-        moduleSizeMm,
-        0,
-        settings.qrHeightMm
+      const drawColumn = getModuleDrawColumn(
+        moduleCount + (quietZoneModules * 2),
+        quietZoneModules,
+        col,
+        1,
+        settings.mirror
       );
+      const y = (row + quietZoneModules) * moduleSizeMm;
+      const x = drawColumn * moduleSizeMm;
+
+      if (settings.moduleShape === QR_MODULE_SHAPES.ROUND) {
+        appendRoundPrismFacets(
+          facets,
+          x + (moduleSizeMm / 2),
+          y + (moduleSizeMm / 2),
+          moduleSizeMm / 2,
+          ROUND_STL_SEGMENTS,
+          0,
+          settings.qrHeightMm
+        );
+      } else {
+        appendPrismFacets(
+          facets,
+          x,
+          y,
+          moduleSizeMm,
+          moduleSizeMm,
+          0,
+          settings.qrHeightMm
+        );
+      }
     }
+  }
+
+  if (usesRoundFinderPatterns(settings.moduleShape)) {
+    appendRoundFinderPatternFacets(
+      facets,
+      moduleSizeMm,
+      settings.qrHeightMm,
+      moduleCount,
+      settings.mirror
+    );
   }
 
   return [
@@ -1079,7 +1558,7 @@ async function generateLabel() {
 
     if (selectedExportMode === "stl") {
       finalSTL = buildQrStl(data, stl);
-      const previewNormalSvg = buildNormalQrSvg(data, true);
+      const previewNormalSvg = buildNormalQrSvg(data, true, stl.mirror, stl.moduleShape);
       finalSVG = "";
       output.innerHTML = previewNormalSvg.svg;
       return;
@@ -1088,15 +1567,15 @@ async function generateLabel() {
     finalSTL = "";
 
     if (svg.bambuSafeMode) {
-      const downloadSafeSvg = buildBambuSafeSvg(data, false, svg.mirror);
-      const previewSafeSvg = buildBambuSafeSvg(data, true, svg.mirror);
+      const downloadSafeSvg = buildBambuSafeSvg(data, false, svg.mirror, svg.moduleShape);
+      const previewSafeSvg = buildBambuSafeSvg(data, true, svg.mirror, svg.moduleShape);
       finalSVG = downloadSafeSvg.svg;
       output.innerHTML = previewSafeSvg.svg;
       return;
     }
 
-    const downloadNormalSvg = buildNormalQrSvg(data, false, svg.mirror);
-    const previewNormalSvg = buildNormalQrSvg(data, true, svg.mirror);
+    const downloadNormalSvg = buildNormalQrSvg(data, false, svg.mirror, svg.moduleShape);
+    const previewNormalSvg = buildNormalQrSvg(data, true, svg.mirror, svg.moduleShape);
     finalSVG = downloadNormalSvg.svg;
     output.innerHTML = previewNormalSvg.svg;
   } catch (error) {
@@ -1193,8 +1672,9 @@ stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 
-for (const input of [bambuSafeModeInput, mirrorSvgInput]) {
+for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput]) {
   input.addEventListener("change", () => {
+    updateStlSummary();
     if (dataInput.value.trim()) {
       generateLabel();
     } else {
@@ -1207,8 +1687,7 @@ for (const input of [
   nozzleSizeInput,
   layerHeightInput,
   moduleMultiplierInput,
-  raisedLayerCountInput,
-  mirrorStlInput
+  raisedLayerCountInput
 ]) {
   input.addEventListener("input", () => {
     updateStlSummary();

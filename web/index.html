@@ -75,6 +75,7 @@
     }
 
     input[type="file"],
+    select,
     input[type="text"],
     input:not([type]) {
       width: 100%;
@@ -276,6 +277,18 @@
       accent-color: var(--accent);
     }
 
+    .shape-setting {
+      display: grid;
+      gap: 8px;
+    }
+
+    .shape-setting label {
+      color: var(--muted);
+      font-size: 0.84rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
     .pairing-card {
       margin: 12px 0 14px;
       padding: 14px 16px;
@@ -424,10 +437,6 @@
       align-items: start;
     }
 
-    .settings-group + .settings-group {
-      margin-top: 8px;
-    }
-
     .settings-group {
       margin-top: 14px;
       min-width: 0;
@@ -448,7 +457,7 @@
 
     .print-grid label {
       display: grid;
-      grid-template-columns: max-content max-content;
+      grid-template-columns: minmax(0, 1fr) 7.5rem;
       align-items: center;
       gap: 10px;
       color: var(--muted);
@@ -463,7 +472,7 @@
     }
 
     .print-grid input[type="number"] {
-      width: 7.5rem;
+      width: 100%;
     }
 
     .print-grid input[type="checkbox"] {
@@ -500,6 +509,10 @@
 
     .stl-summary strong {
       color: var(--text);
+    }
+
+    .stl-summary > * + * {
+      margin-top: 2px;
     }
 
     .instruction-card {
@@ -547,15 +560,93 @@
       display: block;
     }
 
-    #output {
+    .preview-card {
       margin-top: 14px;
-      padding: 14px;
-      border: 1px dashed var(--border);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.45);
-      max-width: 420px;
-      margin-left: auto;
-      margin-right: auto;
+    }
+
+    .preview-layout {
+      max-width: 980px;
+      margin: 0 auto;
+      display: grid;
+      gap: 20px;
+    }
+
+    .preview-toolbar {
+      display: flex;
+      justify-content: flex-start;
+      align-items: end;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .preview-card .shape-setting {
+      width: min(100%, 280px);
+      margin: 0;
+    }
+
+    .preview-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 48px;
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+
+    .preview-toggle input {
+      margin: 0;
+    }
+
+    .preview-pane {
+      display: grid;
+      gap: 16px;
+    }
+
+    .preview-surface {
+      padding: 18px;
+      border: 1px solid rgba(39, 33, 27, 0.12);
+      border-radius: 24px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 245, 238, 0.92));
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+    }
+
+    .preview-label {
+      margin: 0;
+      font-size: 0.88rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      text-align: left;
+    }
+
+    #output {
+      display: grid;
+      place-items: center;
+      min-height: 320px;
+      padding: 8px;
+    }
+
+    .preview-actions {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .preview-guidance {
+      padding: 18px 20px;
+      border: 1px solid rgba(39, 33, 27, 0.12);
+      border-radius: 22px;
+      background: rgba(255, 255, 255, 0.7);
+    }
+
+    .preview-guidance h4 {
+      margin: 0 0 10px;
     }
 
     .export-section[hidden] {
@@ -565,6 +656,7 @@
     svg {
       display: block;
       max-width: 100%;
+      width: min(100%, 520px);
       height: auto;
       margin: 0 auto;
       border: 1px solid rgba(39, 33, 27, 0.12);
@@ -645,6 +737,29 @@
       .box { padding: 15px; border-radius: 18px; }
       button { width: 100%; }
       .button-row { display: block; }
+      .preview-layout {
+        gap: 14px;
+      }
+
+      .preview-surface {
+        padding: 16px;
+      }
+
+      .preview-toolbar {
+        align-items: stretch;
+      }
+
+      .preview-toggle {
+        white-space: normal;
+      }
+
+      .preview-actions {
+        justify-content: stretch;
+      }
+
+      .preview-actions button {
+        width: 100%;
+      }
       .input-row {
         grid-template-columns: 1fr;
       }
@@ -724,21 +839,6 @@
     <div id="svgExportSection" class="export-section" role="tabpanel" aria-labelledby="svgModeBtn" hidden>
       <div class="options">
         <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
-        <label><input type="checkbox" id="mirrorSvg" /> Mirror For Underside Prints</label>
-      </div>
-      <div class="instruction-card">
-        <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
-        <ul class="workflow-list">
-          <li>Generate and download the QR code SVG.</li>
-          <li>Right-click the part you want to modify.</li>
-          <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR-code SVG.</li>
-          <li>Position the modifier where you want the QR.</li>
-          <li>Change the filament color so it shows up on the finished print.</li>
-          <li>If the final visible QR would end up reversed, enable the mirror option before exporting.</li>
-        </ul>
-      </div>
-      <div class="button-row">
-        <button id="downloadBtn" type="button">Download SVG</button>
       </div>
     </div>
     <div id="stlExportSection" class="export-section lookup-panel" role="tabpanel" aria-labelledby="stlModeBtn">
@@ -769,31 +869,50 @@
               <span class="setting-text">QR Height (layers)</span>
               <input id="raisedLayerCount" type="number" min="1" step="1" value="2" />
             </label>
-            <label>
-              <span class="setting-text">Mirror For Underside Prints</span>
-              <input id="mirrorStl" type="checkbox" />
-            </label>
           </div>
         </div>
       </div>
       <div id="stlSummary" class="stl-summary" aria-live="polite"></div>
-      <p class="lookup-help">A default of 4x nozzle width per QR square is a good starting point for reliable prints.</p>
-      <div class="instruction-card">
-        <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
-        <ul class="workflow-list">
-          <li>Generate and download the QR code STL.</li>
-          <li>Right-click the part you want to modify.</li>
-          <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR-code STL.</li>
-          <li>Position the modifier where you want the QR.</li>
-          <li>Change the filament color so it shows up on the finished print.</li>
-          <li>If the final visible QR would end up reversed, enable the mirror option before exporting.</li>
-        </ul>
-      </div>
-      <div class="button-row">
-      <button id="downloadStlBtn" class="button-secondary" type="button">Download STL</button>
+    </div>
+  </div>
+
+  <div class="box">
+    <h3>4. Preview & Download</h3>
+    <div class="lookup-panel preview-card">
+      <div class="preview-layout">
+        <div class="preview-toolbar">
+          <div class="shape-setting">
+            <label for="moduleShape">QR Module Shape</label>
+            <select id="moduleShape">
+              <option value="square">Square</option>
+              <option value="round">Round Dots</option>
+            </select>
+          </div>
+          <label class="preview-toggle"><input type="checkbox" id="mirrorOutput" /> Mirror For Underside Prints</label>
+        </div>
+        <div class="preview-pane">
+          <div class="preview-surface">
+            <div class="preview-label">Preview</div>
+            <div id="output"></div>
+          </div>
+          <div class="preview-actions">
+            <button id="downloadBtn" type="button">Download SVG</button>
+            <button id="downloadStlBtn" class="button-secondary" type="button">Download STL</button>
+          </div>
+        </div>
       </div>
     </div>
-    <div id="output"></div>
+    <div class="instruction-card preview-guidance">
+      <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
+      <ul class="workflow-list">
+        <li>Generate and download the QR file you want to use.</li>
+        <li>Right-click the part you want to modify.</li>
+        <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR SVG or STL.</li>
+        <li>Position the modifier where you want the QR.</li>
+        <li>Change the filament color so it shows up on the finished print.</li>
+        <li>If the final visible QR would end up reversed, enable mirroring before exporting.</li>
+      </ul>
+    </div>
   </div>
 </main>
 
