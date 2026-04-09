@@ -1,0 +1,147 @@
+name: GHCR Cleanup
+
+on:
+  schedule:
+    - cron: "18 4 * * 0"
+  workflow_dispatch:
+
+env:
+  PACKAGE_TYPE: container
+  PACKAGE_NAME: ${{ github.event.repository.name }}
+  KEEP_DEFAULT_BRANCH_BUILDS: "10"
+  KEEP_PR_BUILDS: "5"
+  KEEP_MISC_BUILDS: "5"
+  KEEP_UNTAGGED_BUILDS: "3"
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Delete old GHCR versions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const packageName = process.env.PACKAGE_NAME.toLowerCase();
+            const packageType = process.env.PACKAGE_TYPE;
+            const defaultBranch = context.payload.repository.default_branch;
+            const ownerType = context.payload.repository.owner.type;
+            const keepDefaultBranchBuilds = Number(process.env.KEEP_DEFAULT_BRANCH_BUILDS);
+            const keepPrBuilds = Number(process.env.KEEP_PR_BUILDS);
+            const keepMiscBuilds = Number(process.env.KEEP_MISC_BUILDS);
+            const keepUntaggedBuilds = Number(process.env.KEEP_UNTAGGED_BUILDS);
+            const releaseTagPattern = /^v?\d+\.\d+\.\d+$/;
+            const prTagPattern = /^pr-\d+$/;
+
+            async function requestPage(page) {
+              const route = ownerType === "Organization"
+                ? "GET /orgs/{org}/packages/{package_type}/{package_name}/versions"
+                : "GET /users/{username}/packages/{package_type}/{package_name}/versions";
+
+              const params = ownerType === "Organization"
+                ? { org: owner, package_type: packageType, package_name: packageName, per_page: 100, page }
+                : { username: owner, package_type: packageType, package_name: packageName, per_page: 100, page };
+
+              const response = await github.request(route, params);
+              return response.data;
+            }
+
+            async function deleteVersion(packageVersionId) {
+              const route = ownerType === "Organization"
+                ? "DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}"
+                : "DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}";
+
+              const params = ownerType === "Organization"
+                ? { org: owner, package_type: packageType, package_name: packageName, package_version_id: packageVersionId }
+                : { username: owner, package_type: packageType, package_name: packageName, package_version_id: packageVersionId };
+
+              await github.request(route, params);
+            }
+
+            const versions = [];
+            for (let page = 1; ; page += 1) {
+              const pageData = await requestPage(page);
+              versions.push(...pageData);
+              if (pageData.length < 100) {
+                break;
+              }
+            }
+
+            versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+
+            const keepIds = new Set();
+            const prCounts = new Map();
+            let defaultBranchCount = 0;
+            let miscCount = 0;
+            let untaggedCount = 0;
+
+            for (const version of versions) {
+              const tags = version.metadata?.container?.tags ?? [];
+
+              if (tags.some((tag) => releaseTagPattern.test(tag))) {
+                keepIds.add(version.id);
+                continue;
+              }
+
+              if (tags.length === 0) {
+                if (untaggedCount < keepUntaggedBuilds) {
+                  keepIds.add(version.id);
+                  untaggedCount += 1;
+                }
+                continue;
+              }
+
+              if (tags.includes(defaultBranch) || tags.includes("latest")) {
+                if (defaultBranchCount < keepDefaultBranchBuilds) {
+                  keepIds.add(version.id);
+                  defaultBranchCount += 1;
+                }
+                continue;
+              }
+
+              const prTags = tags.filter((tag) => prTagPattern.test(tag));
+              if (prTags.length > 0) {
+                const prTag = prTags[0];
+                const count = prCounts.get(prTag) ?? 0;
+                if (count < keepPrBuilds) {
+                  keepIds.add(version.id);
+                  prCounts.set(prTag, count + 1);
+                }
+                continue;
+              }
+
+              if (miscCount < keepMiscBuilds) {
+                keepIds.add(version.id);
+                miscCount += 1;
+              }
+            }
+
+            const toDelete = versions.filter((version) => !keepIds.has(version.id));
+
+            core.summary
+              .addHeading("GHCR cleanup summary")
+              .addTable([
+                [{data: "Package", header: true}, packageName],
+                [{data: "Total versions", header: true}, String(versions.length)],
+                [{data: "Keeping", header: true}, String(keepIds.size)],
+                [{data: "Deleting", header: true}, String(toDelete.length)]
+              ]);
+
+            for (const version of toDelete) {
+              const tags = (version.metadata?.container?.tags ?? []).join(", ") || "(untagged)";
+              core.info(`Deleting package version ${version.id}: ${tags}`);
+              await deleteVersion(version.id);
+              core.summary.addRaw(`Deleted \`${version.id}\` - ${tags}\n`, true);
+            }
+
+            if (toDelete.length === 0) {
+              core.info("No package versions matched the cleanup policy.");
+              core.summary.addRaw("No package versions matched the cleanup policy.\n", true);
+            }
+
+            await core.summary.write();

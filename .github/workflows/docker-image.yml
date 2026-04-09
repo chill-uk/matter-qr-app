@@ -13,6 +13,8 @@ on:
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
+  PACKAGE_NAME: ${{ github.event.repository.name }}
+  IMAGE_DESCRIPTION: Browser-based Matter QR code recovery and export tool with SVG and STL downloads.
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 concurrency:
@@ -52,8 +54,13 @@ jobs:
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=ref,event=branch
-            type=ref,event=tag
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
             type=sha,prefix=sha-
+          labels: |
+            org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+        env:
+          DOCKER_METADATA_ANNOTATIONS_LEVELS: manifest,index
 
       - name: Build and push Docker image
         uses: docker/build-push-action@v6.18.0
@@ -64,5 +71,9 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+          annotations: |
+            ${{ steps.meta.outputs.annotations }}
+            manifest:org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
+            index:org.opencontainers.image.description=${{ env.IMAGE_DESCRIPTION }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

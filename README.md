@@ -36,15 +36,6 @@ If photo upload does not find a QR code, use your phone or another QR scanning a
 - Export an SVG
 - Export an STL
 
-## STL Instructions for Bambu Lab / OrcaSlicer
-
-- Generate and download the QR code STL
-- Right-click the part you want to modify.
-- Choose Add modifier, then Load, and select the QR-code STL.
-- Position the modifier where you want the QR.
-- Change the filament color so it shows up on the finished print.
-- If the final visible QR would end up reversed, enable the mirror option before exporting.
-
 ## Privacy
 
 Default use is fully client-side:
@@ -109,6 +100,40 @@ Then run it:
 ```bash
 docker run -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 ```
+
+Published images follow the standard package path:
+
+```text
+ghcr.io/<owner>/<repo>
+```
+
+For this repository, that is:
+
+```text
+ghcr.io/chill-uk/matter-qr-app
+```
+
+### GHCR Tags
+
+The container workflow publishes a mix of stable and immutable tags:
+
+- default branch: `latest`, `main` or `master`, and `sha-<commit>`
+- releases: `1.2.3`, `1.2`, and `sha-<commit>`
+- pull requests: `pr-<number>` and `sha-<commit>`
+
+For deployments, prefer a release tag or a specific `sha-<commit>` tag instead of relying only on `latest`.
+
+### GHCR Cleanup Policy
+
+The scheduled GHCR cleanup workflow keeps:
+
+- all release versions tagged like `v1.2.3` or `1.2.3`
+- the latest 10 default-branch builds
+- the latest 5 builds for each `pr-<number>` tag
+- the latest 5 other tagged builds
+- the latest 3 untagged versions
+
+Older non-release versions are deleted automatically on the cleanup schedule or when the workflow is run manually.
 
 ## Support
 
