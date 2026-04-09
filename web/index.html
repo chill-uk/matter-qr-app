@@ -214,6 +214,36 @@
       align-items: center;
     }
 
+    .camera-panel {
+      display: grid;
+      gap: 10px;
+      margin: 0 0 14px;
+      padding: 14px;
+      border: 1px solid rgba(39, 33, 27, 0.12);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.7);
+      box-shadow: 0 18px 32px rgba(39, 33, 27, 0.08);
+    }
+
+    .camera-preview {
+      width: 100%;
+      max-width: 420px;
+      aspect-ratio: 4 / 3;
+      border-radius: 14px;
+      background: rgba(39, 33, 27, 0.08);
+      object-fit: cover;
+    }
+
+    .camera-status {
+      color: var(--muted);
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+
+    .camera-status.is-error {
+      color: #9b3125;
+    }
+
     .mode-switch {
       display: inline-flex;
       gap: 8px;
@@ -813,7 +843,11 @@
     <span>The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs.</span></p>
 
   <div class="box">
-    <h3>1. Upload Photo & Decode</h3>
+    <h3>1. Scan Or Upload</h3>
+    <div id="cameraPanel" class="camera-panel" hidden>
+      <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+      <div id="cameraStatus" class="camera-status" aria-live="polite"></div>
+    </div>
     <div class="upload-row">
       <input type="file" id="file" accept="image/*" />
       <div id="status" class="status-chip" aria-live="polite">
@@ -821,7 +855,11 @@
         <span>Waiting For Upload</span>
       </div>
     </div>
-    <p class="field-help">Upload a photo of the device's Matter QR code to extract the setup payload.</p>
+    <div class="button-row">
+      <button id="startCameraBtn" type="button">Scan Live</button>
+      <button id="stopCameraBtn" class="button-secondary" type="button" disabled>Stop Camera</button>
+    </div>
+    <p class="field-help">Use a live camera scan for faster decoding, or upload a photo of the device's Matter QR code to extract the setup payload.</p>
     <p class="field-help">If photo decoding does not find a QR code, you can scan the label with a third-party QR app, copy the <code>MT:</code> value, and paste it into the field in step 2.</p>
   </div>
 
@@ -967,6 +1005,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260409-30"></script>
+<script type="module" src="app.js?v=20260409-32"></script>
 </body>
 </html>

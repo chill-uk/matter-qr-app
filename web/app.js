@@ -3,10 +3,16 @@ import {
   BrowserMultiFormatReader
 } from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
 
-const reader = new BrowserMultiFormatReader();
+const imageReader = new BrowserMultiFormatReader();
+const cameraReader = new BrowserMultiFormatReader();
 let finalSVG = "";
 let finalSTL = "";
 const fileInput = document.getElementById("file");
+const startCameraBtn = document.getElementById("startCameraBtn");
+const stopCameraBtn = document.getElementById("stopCameraBtn");
+const cameraPanel = document.getElementById("cameraPanel");
+const cameraPreview = document.getElementById("cameraPreview");
+const cameraStatus = document.getElementById("cameraStatus");
 const dataInput = document.getElementById("data");
 const payloadValidity = document.getElementById("payloadValidity");
 const manualDisplay = document.getElementById("manualDisplay");
@@ -114,6 +120,8 @@ let liveLookupPending = false;
 let vendorDirectoryPromise = null;
 const modelLookupCache = new Map();
 let exportMode = "stl";
+let cameraScanControls = null;
+let cameraScanActive = false;
 
 function formatSvgNumber(value) {
   return Number.parseFloat(value.toFixed(3)).toString();
@@ -141,6 +149,29 @@ function setStatus(message, isError = false) {
 
   status.classList.add(isError ? "is-error" : "is-success");
   status.innerHTML = `<span class="validity-icon">${isError ? "✕" : "✓"}</span><span>${escapeHtml(message)}</span>`;
+}
+
+function setCameraStatus(message, isError = false) {
+  if (!cameraStatus) {
+    return;
+  }
+
+  cameraStatus.textContent = message;
+  cameraStatus.classList.toggle("is-error", Boolean(isError && message));
+}
+
+function updateCameraUi(isActive) {
+  if (cameraPanel) {
+    cameraPanel.hidden = !isActive;
+  }
+
+  if (startCameraBtn) {
+    startCameraBtn.disabled = isActive;
+  }
+
+  if (stopCameraBtn) {
+    stopCameraBtn.disabled = !isActive;
+  }
 }
 
 function updatePayloadValidity(state) {
@@ -741,6 +772,93 @@ function getNormalizedMatterQrText(text) {
   return payload ? `${MATTER_QR_PREFIX}${payload}` : "";
 }
 
+function applyDecodedQrText(text, successMessage = "QR decoded.") {
+  dataInput.value = text;
+  syncManualCodeFromData({ force: true });
+  generateLabel();
+  setStatus(
+    lastAutoManualCode
+      ? "Valid QR code."
+      : successMessage
+  );
+}
+
+function stopCameraTracks() {
+  if (!(cameraPreview instanceof HTMLVideoElement)) {
+    return;
+  }
+
+  const stream = cameraPreview.srcObject;
+
+  if (stream instanceof MediaStream) {
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
+  }
+
+  cameraPreview.srcObject = null;
+}
+
+function stopCameraScan({ preserveStatus = false } = {}) {
+  cameraScanActive = false;
+
+  if (cameraScanControls) {
+    cameraScanControls.stop();
+    cameraScanControls = null;
+  }
+
+  stopCameraTracks();
+  updateCameraUi(false);
+
+  if (!preserveStatus) {
+    setCameraStatus("");
+  }
+}
+
+async function startCameraScan() {
+  if (!startCameraBtn || !cameraPreview) {
+    return;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    setStatus("Camera scanning is not supported in this browser.", true);
+    return;
+  }
+
+  stopCameraScan({ preserveStatus: true });
+  cameraScanActive = true;
+  updateCameraUi(true);
+  setCameraStatus("Starting camera...");
+  setStatus("Waiting for a live QR scan...");
+
+  try {
+    cameraScanControls = await cameraReader.decodeFromConstraints(
+      {
+        video: {
+          facingMode: { ideal: "environment" }
+        }
+      },
+      cameraPreview,
+      (result) => {
+        if (!cameraScanActive || !result) {
+          return;
+        }
+
+        const text = result.getText();
+        stopCameraScan({ preserveStatus: true });
+        setCameraStatus("Scan complete.");
+        applyDecodedQrText(text, "Live QR scan complete.");
+      }
+    );
+
+    setCameraStatus("Point the camera at the Matter QR code.");
+  } catch (error) {
+    stopCameraScan({ preserveStatus: true });
+    setCameraStatus("Unable to access the camera.", true);
+    setStatus(`Camera scan failed: ${error.message}`, true);
+  }
+}
+
 function extractMatterQrPayload(text) {
   if (!text) return "";
 
@@ -991,17 +1109,8 @@ fileInput.addEventListener("change", async (e) => {
   const url = URL.createObjectURL(file);
 
   try {
-    const result = await reader.decodeFromImageUrl(url);
-    const text = result.getText();
-
-    dataInput.value = text;
-    syncManualCodeFromData({ force: true });
-    generateLabel();
-    setStatus(
-      lastAutoManualCode
-        ? "Valid QR code."
-        : "QR decoded."
-    );
+    const result = await imageReader.decodeFromImageUrl(url);
+    applyDecodedQrText(result.getText());
   } catch (error) {
     setStatus("Invalid QR code.", true);
   } finally {
@@ -2339,6 +2448,12 @@ svgModeBtn.addEventListener("keydown", handleExportModeKeydown);
 stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
+startCameraBtn?.addEventListener("click", startCameraScan);
+stopCameraBtn?.addEventListener("click", () => {
+  stopCameraScan();
+  setCameraStatus("Camera scan stopped.");
+  setStatus("");
+});
 
 for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput].filter(Boolean)) {
   input.addEventListener("change", () => {
@@ -2372,4 +2487,5 @@ updateExportModeUi();
 updateCornerRadiusInputState();
 updateStlSummary();
 updatePayloadValidity("empty");
+updateCameraUi(false);
 setStatus("");
