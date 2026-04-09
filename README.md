@@ -2,7 +2,7 @@
 
 A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting an SVG / STL QR label for transplanting onto 3D-printed models.
 
-Checl it out here: [matterqr.codes](https://generate.matterqr.codes)
+Check it out here: [matterqr.codes](https://generate.matterqr.codes)
 
 Or you can grab the docker image and self-host it. (Instructions at the end)
 
