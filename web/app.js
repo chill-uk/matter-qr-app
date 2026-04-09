@@ -1678,7 +1678,7 @@ stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 
-for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput]) {
+for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput].filter(Boolean)) {
   input.addEventListener("change", () => {
     updateStlSummary();
     if (dataInput.value.trim()) {
@@ -1694,7 +1694,7 @@ for (const input of [
   layerHeightInput,
   moduleMultiplierInput,
   raisedLayerCountInput
-]) {
+].filter(Boolean)) {
   input.addEventListener("input", () => {
     updateStlSummary();
     if (dataInput.value.trim()) {
