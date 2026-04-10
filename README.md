@@ -21,14 +21,6 @@ Note: The regenerated QR code will often look different from the original label.
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
 
-#### If Decoding Fails
-
-If photo upload does not find a QR code, use your phone or another QR scanning app to read the code, copy the `MT:` value, and paste it directly into the `MT:` text field in the app. You must use a 3rd party app to scan the QR code as the apple built in one will try and pair your device.
-
-#### Live Camera Scan Notes
-
-- Live camera scanning depends on browser camera support
-
 ### Inspect
 
 - Parse common Matter onboarding fields such as:
@@ -46,7 +38,6 @@ If photo upload does not find a QR code, use your phone or another QR scanning a
 - Export an SVG
 - Export an STL
 - Choose square or round-dot QR modules
-- Adjust square corner radius from `0%` to `100%`
 - Mirror the output for underside print workflows
 
 ## Privacy
@@ -101,8 +92,6 @@ http://localhost:8080
 ```
 
 ## Pull From GHCR
-
-Images are published to GHCR only when a version tag such as `v1.0.0` is pushed.
 
 Pull the latest published image:
 
