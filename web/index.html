@@ -217,17 +217,17 @@
     .camera-panel {
       display: grid;
       gap: 10px;
-      margin: 0 0 14px;
-      padding: 14px;
-      border: 1px solid rgba(39, 33, 27, 0.12);
-      border-radius: 18px;
-      background: rgba(255, 255, 255, 0.7);
-      box-shadow: 0 18px 32px rgba(39, 33, 27, 0.08);
+      margin-top: 4px;
+      padding: 14px 0 0;
+      border-top: 1px solid rgba(39, 33, 27, 0.08);
+    }
+
+    .camera-panel[hidden] {
+      display: none;
     }
 
     .camera-preview {
       width: 100%;
-      max-width: 420px;
       aspect-ratio: 4 / 3;
       border-radius: 14px;
       background: rgba(39, 33, 27, 0.08);
@@ -242,6 +242,20 @@
 
     .camera-status.is-error {
       color: #9b3125;
+    }
+
+    .camera-panel-actions {
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    .camera-toggle-active {
+      background: linear-gradient(135deg, #b9483a 0%, #8a2f25 100%);
+      box-shadow: 0 12px 24px rgba(138, 47, 37, 0.18);
+    }
+
+    .camera-toggle-active:hover:enabled {
+      box-shadow: 0 16px 26px rgba(138, 47, 37, 0.22);
     }
 
     .mode-switch {
@@ -435,11 +449,35 @@
     }
 
     .lookup-status {
-      min-height: 1.4em;
-      margin-top: 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 46px;
+      margin-top: 0;
+      padding: 0 14px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      background: var(--surface-strong);
       color: var(--muted);
       font-size: 0.92rem;
+      font-weight: 700;
       line-height: 1.4;
+    }
+
+    .lookup-status[hidden] {
+      display: none;
+    }
+
+    .lookup-status.is-success {
+      border-color: rgba(31, 106, 83, 0.26);
+      background: rgba(236, 248, 243, 0.95);
+      color: var(--accent-strong);
+    }
+
+    .lookup-status.is-error {
+      border-color: rgba(185, 72, 58, 0.24);
+      background: rgba(255, 240, 238, 0.96);
+      color: #9b3125;
     }
 
     .field-help {
@@ -449,11 +487,37 @@
       line-height: 1.45;
     }
 
-    .upload-row {
+    .scan-grid {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .scan-card {
+      display: grid;
       gap: 10px;
-      align-items: center;
+      padding: 16px;
+      border: 1px solid rgba(39, 33, 27, 0.12);
+      border-radius: 18px;
+      background: rgba(255, 255, 255, 0.62);
+    }
+
+    .scan-card h4 {
+      margin: 0;
+      font-size: 0.98rem;
+      letter-spacing: -0.02em;
+    }
+
+    .scan-card p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.9rem;
+      line-height: 1.45;
+    }
+
+    .upload-row {
+      display: block;
     }
 
     .print-grid {
@@ -790,6 +854,9 @@
       .box { padding: 15px; border-radius: 18px; }
       button { width: 100%; }
       .button-row { display: block; }
+      .scan-grid {
+        grid-template-columns: 1fr;
+      }
       .preview-layout {
         gap: 14px;
       }
@@ -839,28 +906,32 @@
 <main class="page">
   <h1>Matter QR Code Tool</h1>
   <p class="lead"><span>This tool lets you upload a Matter QR code, decode it, and recover the setup code.</span><span>You can then generate clean SVG or STL files, ready for 3D printing or creating replacement labels.</span></p>
-  <p class="privacy">Everything runs locally in your browser. No sensitive data is sent anywhere.
-    <span>The optional live CSA DCL lookup only requests the vendor and product records needed for the extracted IDs.</span></p>
+  <p class="privacy">Everything runs locally in your browser. No sensitive data is sent anywhere.</p>
 
   <div class="box">
     <h3>1. Scan Or Upload</h3>
-    <div id="cameraPanel" class="camera-panel" hidden>
-      <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
-      <div id="cameraStatus" class="camera-status" aria-live="polite"></div>
-    </div>
-    <div class="upload-row">
-      <input type="file" id="file" accept="image/*" />
-      <div id="status" class="status-chip" aria-live="polite">
-        <span class="validity-icon">-</span>
-        <span>Waiting For Upload</span>
+    <div class="scan-grid">
+      <div class="scan-card">
+        <h4>Live Camera</h4>
+        <p>Point your phone or laptop camera at the Matter QR code for fast scanning.</p>
+        <div id="cameraPanel" class="camera-panel" hidden>
+          <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
+          <div id="cameraStatus" class="camera-status" aria-live="polite"></div>
+        </div>
+        <div class="button-row">
+          <button id="startCameraBtn" type="button">📷 Start Camera Scan</button>
+        </div>
+      </div>
+      <div class="scan-card">
+        <h4>Photo Upload</h4>
+        <p>Choose an existing photo or screenshot if the live scanner is not convenient.</p>
+        <div class="upload-row">
+          <input type="file" id="file" accept="image/*" />
+        </div>
       </div>
     </div>
-    <div class="button-row">
-      <button id="startCameraBtn" type="button">Scan Live</button>
-      <button id="stopCameraBtn" class="button-secondary" type="button" disabled>Stop Camera</button>
-    </div>
-    <p class="field-help">Use a live camera scan for faster decoding, or upload a photo of the device's Matter QR code to extract the setup payload.</p>
-    <p class="field-help">If photo decoding does not find a QR code, you can scan the label with a third-party QR app, copy the <code>MT:</code> value, and paste it into the field in step 2.</p>
+    <div id="status" class="status-chip" aria-live="polite" hidden></div>
+    <p class="field-help">If automatic decoding still does not work, you can paste the <code>MT:</code> payload directly into the field in step 2.</p>
   </div>
 
   <div class="box">
@@ -879,10 +950,11 @@
     </div>
     <div class="lookup-panel">
       <div class="button-row">
-        <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Lookup Official Vendor/Product Info</button>
+        <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Request Official Product Info</button>
+        <div id="lookupStatus" class="lookup-status" aria-live="polite" hidden></div>
       </div>
-      <p class="lookup-help">Optional: query the official CSA Distributed Compliance Ledger for live vendor and model records. This requests the matching vendor and product records for the extracted IDs, not the setup PIN or full QR payload.</p>
-      <div id="lookupStatus" class="lookup-status" aria-live="polite"></div>
+      <p class="lookup-help">Optional: This requests the product records via its product ID.</p>
+      <p class="lookup-help"><strong>No sensitive information is sent.</strong> Only the extracted vendor and product IDs are used for the lookup, not the setup PIN or full <code>MT:</code> payload.</p>
     </div>
     <div id="detailsGrid" class="details-grid"></div>
     <div class="note">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
@@ -1005,6 +1077,6 @@
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260409-32"></script>
+<script type="module" src="app.js?v=20260410-10"></script>
 </body>
 </html>

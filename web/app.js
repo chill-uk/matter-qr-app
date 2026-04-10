@@ -9,8 +9,8 @@ let finalSVG = "";
 let finalSTL = "";
 const fileInput = document.getElementById("file");
 const startCameraBtn = document.getElementById("startCameraBtn");
-const stopCameraBtn = document.getElementById("stopCameraBtn");
 const cameraPanel = document.getElementById("cameraPanel");
+const cameraCard = startCameraBtn?.closest(".scan-card") || cameraPanel?.closest(".scan-card") || null;
 const cameraPreview = document.getElementById("cameraPreview");
 const cameraStatus = document.getElementById("cameraStatus");
 const dataInput = document.getElementById("data");
@@ -143,10 +143,12 @@ function setStatus(message, isError = false) {
   status.classList.remove("is-success", "is-error");
 
   if (!message) {
-    status.innerHTML = '<span class="validity-icon">-</span><span>Waiting For Upload</span>';
+    status.hidden = true;
+    status.innerHTML = "";
     return;
   }
 
+  status.hidden = false;
   status.classList.add(isError ? "is-error" : "is-success");
   status.innerHTML = `<span class="validity-icon">${isError ? "✕" : "✓"}</span><span>${escapeHtml(message)}</span>`;
 }
@@ -166,12 +168,25 @@ function updateCameraUi(isActive) {
   }
 
   if (startCameraBtn) {
-    startCameraBtn.disabled = isActive;
+    startCameraBtn.classList.toggle("camera-toggle-active", isActive);
+    startCameraBtn.textContent = isActive
+      ? "Stop Camera Scan"
+      : "📷 Start Camera Scan";
+  }
+}
+
+function focusCameraPanel() {
+  const focusTarget = cameraCard || cameraPanel;
+  if (!focusTarget) {
+    return;
   }
 
-  if (stopCameraBtn) {
-    stopCameraBtn.disabled = !isActive;
-  }
+  window.requestAnimationFrame(() => {
+    focusTarget.scrollIntoView({
+      behavior: "smooth",
+      block: "start"
+    });
+  });
 }
 
 function updatePayloadValidity(state) {
@@ -201,9 +216,28 @@ function updateManualDisplay(value) {
   manualDisplay.style.color = value ? "#111" : "#888";
 }
 
-function setLookupStatus(message, isError = false) {
-  lookupStatus.textContent = message;
-  lookupStatus.style.color = isError ? "#b00020" : "#6c6358";
+function setLookupStatus(message, state = "success") {
+  if (!lookupStatus) {
+    return;
+  }
+
+  lookupStatus.classList.remove("is-success", "is-error");
+
+  if (!message) {
+    lookupStatus.hidden = true;
+    lookupStatus.innerHTML = "";
+    return;
+  }
+
+  lookupStatus.hidden = false;
+  if (state === "error") {
+    lookupStatus.classList.add("is-error");
+  } else if (state === "success") {
+    lookupStatus.classList.add("is-success");
+  }
+
+  const icon = state === "error" ? "✕" : state === "success" ? "✓" : "…";
+  lookupStatus.innerHTML = `<span class="validity-icon">${icon}</span><span>${escapeHtml(message)}</span>`;
 }
 
 function escapeHtml(value) {
@@ -248,8 +282,8 @@ function updateLookupButtonState() {
 
   lookupBtn.textContent =
     getActiveLookupData(currentPayload)
-      ? "Refresh Official Vendor/Product Info"
-      : "Lookup Official Vendor/Product Info";
+      ? "Refresh Official Product Info"
+      : "Request Official Product Info";
 }
 
 function updateExportModeUi() {
@@ -603,7 +637,7 @@ async function lookupOfficialMatterInfo() {
 
   liveLookupPending = true;
   updateLookupButtonState();
-  setLookupStatus("Looking up official CSA DCL vendor and model records...");
+  setLookupStatus("Requesting official product info...", "pending");
 
   try {
     const [vendorResult, modelResult] = await Promise.allSettled([
@@ -629,11 +663,11 @@ async function lookupOfficialMatterInfo() {
       updateDetailsDisplay(currentPayload);
 
       if (vendorRecord && modelRecord) {
-        setLookupStatus("Loaded official vendor and model metadata from the CSA DCL.");
+        setLookupStatus("Loaded official product info.");
       } else if (vendorRecord) {
-        setLookupStatus("Loaded an official vendor record from the CSA DCL.");
+        setLookupStatus("Loaded official vendor info.");
       } else {
-        setLookupStatus("Loaded an official model record from the CSA DCL.");
+        setLookupStatus("Loaded official product info.");
       }
 
       return;
@@ -647,7 +681,7 @@ async function lookupOfficialMatterInfo() {
     updateDetailsDisplay(currentPayload);
 
     if (vendorResult.status === "fulfilled" && modelResult.status === "fulfilled") {
-      setLookupStatus("No matching official vendor or model record was found in the CSA DCL.");
+      setLookupStatus("No matching official product record was found.");
       return;
     }
 
@@ -656,8 +690,8 @@ async function lookupOfficialMatterInfo() {
     clearLiveLookupData();
     updateDetailsDisplay(currentPayload);
     setLookupStatus(
-      `Live DCL lookup is unavailable in this deployment: ${error.message} This usually means the /api/dcl proxy is missing or the upstream DCL service is temporarily unavailable.`,
-      true
+      `Official product lookup is unavailable right now: ${error.message}`,
+      "error"
     );
   } finally {
     if (requestedKey === getPayloadLookupKey(currentPayload)) {
@@ -820,6 +854,13 @@ async function startCameraScan() {
     return;
   }
 
+  if (cameraScanActive) {
+    stopCameraScan();
+    setCameraStatus("Camera scan stopped.");
+    setStatus("");
+    return;
+  }
+
   if (!navigator.mediaDevices?.getUserMedia) {
     setStatus("Camera scanning is not supported in this browser.", true);
     return;
@@ -828,6 +869,7 @@ async function startCameraScan() {
   stopCameraScan({ preserveStatus: true });
   cameraScanActive = true;
   updateCameraUi(true);
+  focusCameraPanel();
   setCameraStatus("Starting camera...");
   setStatus("Waiting for a live QR scan...");
 
@@ -851,7 +893,7 @@ async function startCameraScan() {
       }
     );
 
-    setCameraStatus("Point the camera at the Matter QR code.");
+    setCameraStatus("");
   } catch (error) {
     stopCameraScan({ preserveStatus: true });
     setCameraStatus("Unable to access the camera.", true);
@@ -2449,11 +2491,6 @@ stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 startCameraBtn?.addEventListener("click", startCameraScan);
-stopCameraBtn?.addEventListener("click", () => {
-  stopCameraScan();
-  setCameraStatus("Camera scan stopped.");
-  setStatus("");
-});
 
 for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput].filter(Boolean)) {
   input.addEventListener("change", () => {
