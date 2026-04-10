@@ -21,6 +21,8 @@ The app is now intentionally simpler than the original label-generator idea.
 Current behavior:
 
 - live camera scan with in-browser QR detection
+  - the active camera view lives inline in the `Live Camera` card
+  - the page scroll target is the full card so the heading and helper text stay visible on mobile
 - photo upload and QR decode
 - direct `MT:` payload input/editing when scanning fails
 - inline MT payload validity feedback beside the text field
@@ -34,6 +36,9 @@ Current behavior:
   - commissioning flow
   - rendezvous methods
 - optional live vendor/product lookup through the CSA DCL
+  - presented as `Request Official Product Info`
+  - lookup status is shown inline beside the button with pending / success / error states
+  - only extracted vendor/product IDs are sent, not the full payload or setup PIN
 - QR-only SVG export
   - optional compatibility mode for apps that fail on SVG viewport sizing
   - optional mirrored SVG export for underside workflows
@@ -106,6 +111,7 @@ Optional behavior:
 - SVG export does not have a physical mm sizing workflow
 - there is still no automated test harness around the Matter parsing and export logic
 - mobile live camera scanning may require `https://` depending on browser security rules, especially on iOS
+- GitHub container publishing only happens from version tag pushes, not normal branch pushes
 
 ## Good Future Improvements
 

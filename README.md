@@ -38,7 +38,8 @@ If photo upload does not find a QR code, use your phone or another QR scanning a
   - product ID
   - commissioning flow
   - rendezvous methods
-- Optionally look up official vendor and product metadata from the CSA Distributed Compliance Ledger (DCL)
+- Optionally request official vendor and product metadata from the CSA Distributed Compliance Ledger (DCL)
+- DCL lookups only use the extracted vendor and product IDs, not the setup PIN or full `MT:` payload
 
 ### Export
 
