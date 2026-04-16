@@ -36,6 +36,12 @@ const layerHeightInput = document.getElementById("layerHeight");
 const moduleMultiplierInput = document.getElementById("moduleMultiplier");
 const raisedLayerCountInput = document.getElementById("raisedLayerCount");
 const stlSummary = document.getElementById("stlSummary");
+const themeToggle = document.getElementById("themeToggle");
+const themeMenu = document.getElementById("themeMenu");
+const themeOptionButtons = Array.from(document.querySelectorAll("[data-theme-option]"));
+const languageToggle = document.getElementById("languageToggle");
+const languageMenu = document.getElementById("languageMenu");
+const languageOptionButtons = Array.from(document.querySelectorAll("[data-language-option]"));
 const MATTER_QR_PREFIX = "MT:";
 const MATTER_BASE38_CHARSET = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ-.";
 const STANDARD_COMMISSIONING_FLOW = 0;
@@ -113,6 +119,714 @@ const KNOWN_PRODUCT_NAMES = {
     32771: "DIRIGERA Hub for smart products"
   }
 };
+const LANGUAGE_STORAGE_KEY = "matterQrLanguage";
+const THEME_STORAGE_KEY = "matterQrTheme";
+const LANGUAGE_FLAGS = {
+  en: "🇬🇧",
+  nl: "🇳🇱",
+  es: "🇪🇸",
+  de: "🇩🇪",
+  fr: "🇫🇷",
+  it: "🇮🇹"
+};
+const THEME_ICONS = {
+  auto: "◐",
+  light: "☀",
+  dark: "☾"
+};
+const THEME_NAMES = {
+  auto: "Auto",
+  light: "Light",
+  dark: "Dark"
+};
+const TRANSLATIONS = {
+  en: {
+    languageName: "English",
+    "language.label": "Language",
+    "theme.label": "Theme",
+    "theme.auto": "Auto",
+    "theme.light": "Light",
+    "theme.dark": "Dark",
+    "page.title": "Matter QR Code Tool",
+    "page.lead1": "This tool lets you upload a Matter QR code, decode it, and recover the setup code.",
+    "page.lead2": "You can then generate clean SVG or STL files, ready for 3D printing or creating replacement labels.",
+    "privacy.local": "Everything runs locally in your browser. No sensitive data is sent anywhere.",
+    "scan.title": "1. Scan Or Upload",
+    "scan.camera.title": "Live Camera",
+    "scan.camera.help": "Point your phone or laptop camera at the Matter QR code for fast scanning.",
+    "scan.camera.start": "📷 Start Camera Scan",
+    "scan.camera.stop": "Stop Camera Scan",
+    "scan.upload.title": "Photo Upload",
+    "scan.upload.help": "Choose an existing photo or screenshot if the live scanner is not convenient.",
+    "scan.fallback": "If automatic decoding still does not work, you can paste the <code>MT:</code> payload directly into the field in step 2.",
+    "payload.title": "2. Review Payload",
+    "payload.waiting": "Waiting For Input",
+    "payload.valid": "Valid MT Code",
+    "payload.invalid": "Invalid MT Code",
+    "payload.help": "The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.",
+    "payload.pairingLabel": "Extracted Pairing Code",
+    "payload.warning": "Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.",
+    "lookup.request": "Request Official Product Info",
+    "lookup.refresh": "Refresh Official Product Info",
+    "lookup.loadingButton": "Looking Up Official Info...",
+    "lookup.pending": "Requesting official product info...",
+    "lookup.loadedProduct": "Loaded official product info.",
+    "lookup.loadedVendor": "Loaded official vendor info.",
+    "lookup.noRecord": "No matching official product record was found.",
+    "lookup.unavailable": "Official product lookup is unavailable right now: {message}",
+    "lookup.help": "Optional: This requests the product records via its product ID.",
+    "lookup.privacy": "<strong>No sensitive information is sent.</strong> Only the extracted vendor and product IDs are used for the lookup, not the setup PIN or full <code>MT:</code> payload.",
+    "export.title": "3. Export",
+    "export.modeLabel": "Export mode",
+    "export.svg": "SVG Export",
+    "export.stl": "STL Export",
+    "export.compatibility": "Compatibility mode: no viewport sizing",
+    "stl.settings": "STL Settings",
+    "stl.help": "Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.",
+    "stl.printer": "Your Printer",
+    "stl.nozzle": "Nozzle Size (mm)",
+    "stl.layer": "Layer Height (mm)",
+    "stl.output": "QR Code Output",
+    "stl.width": "QR Square Width (x nozzle)",
+    "stl.height": "QR Height (layers)",
+    "stl.squareSize": "Each QR square will be ",
+    "stl.qrHeight": "The QR will be ",
+    "stl.tall": " tall.",
+    "stl.fullSize": "The full QR will be about ",
+    "stl.mirrorOn": "Mirroring is enabled for underside printing.",
+    "stl.mirrorOff": "Mirroring is currently off.",
+    "preview.title": "4. Preview & Download",
+    "preview.moduleShape": "QR Module Shape",
+    "preview.square": "Square",
+    "preview.round": "Round Dots",
+    "preview.cornerRadius": "Corner Radius (%)",
+    "preview.orientation": "Print Orientation",
+    "preview.standard": "Standard",
+    "preview.mirrored": "Underside / Mirrored",
+    "preview.label": "Preview",
+    "download.svg": "Download SVG",
+    "download.stl": "Download STL",
+    "instructions.title": "Instructions for Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Generate and download the QR file you want to use.",
+    "instructions.step2": "Right-click the part you want to modify.",
+    "instructions.step3": "Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR SVG or STL.",
+    "instructions.step4": "Position the modifier where you want the QR.",
+    "instructions.step5": "Change the filament color so it shows up on the finished print.",
+    "instructions.step6": "If the final visible QR would end up reversed, enable mirroring before exporting.",
+    "support.title": "Support",
+    "support.copy": "If this tool helped you rescue a device or saved you some time, you can follow the project or support me here.",
+    "support.github": "GitHub Repo",
+    "support.kofi": "Support Me",
+    "details.setupPin": "Setup PIN",
+    "details.discriminator": "Discriminator",
+    "details.vendorId": "Vendor ID",
+    "details.productId": "Product ID",
+    "details.version": "Version",
+    "details.flow": "Flow",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Model Name",
+    "details.partNumber": "Part Number",
+    "details.vendorPage": "Vendor Page",
+    "details.productPage": "Product Page",
+    "details.supportPage": "Support Page",
+    "details.officialLinks": "Official DCL Links",
+    "details.openVendor": "Open vendor site",
+    "details.openProduct": "Open product page",
+    "details.openSupport": "Open support page",
+    "flow.standard": "Standard",
+    "flow.userIntent": "User-Intent",
+    "flow.custom": "Custom",
+    "flow.unknown": "Unknown ({value})",
+    "status.validQr": "Valid QR code.",
+    "status.qrDecoded": "QR decoded.",
+    "status.invalidQr": "Invalid QR code.",
+    "status.scanStopped": "Camera scan stopped.",
+    "status.cameraUnsupported": "Camera scanning is not supported in this browser.",
+    "status.cameraStarting": "Starting camera...",
+    "status.waitingLiveScan": "Waiting for a live QR scan...",
+    "status.scanComplete": "Scan complete.",
+    "status.liveScanComplete": "Live QR scan complete.",
+    "status.cameraUnavailable": "Unable to access the camera.",
+    "status.cameraFailed": "Camera scan failed: {message}",
+    "status.generateFailed": "Could not generate the QR label: {message}",
+    "status.generateFirstSvg": "Generate a label before downloading.",
+    "status.generateFirstStl": "Generate a label before downloading the STL.",
+    "status.svgDownloaded": "SVG downloaded.",
+    "status.stlDownloaded": "STL downloaded."
+  },
+  nl: {
+    languageName: "Nederlands",
+    "language.label": "Taal",
+    "theme.label": "Thema",
+    "theme.auto": "Automatisch",
+    "theme.light": "Licht",
+    "theme.dark": "Donker",
+    "page.title": "Matter QR-code tool",
+    "page.lead1": "Upload een Matter QR-code, decodeer hem en haal de installatiecode terug.",
+    "page.lead2": "Maak daarna nette SVG- of STL-bestanden voor 3D-printen of vervangende labels.",
+    "privacy.local": "Alles gebeurt lokaal in je browser. Er wordt geen gevoelige data verstuurd.",
+    "scan.title": "1. Scannen of uploaden",
+    "scan.camera.title": "Live camera",
+    "scan.camera.help": "Richt de camera van je telefoon of laptop op de Matter QR-code voor snel scannen.",
+    "scan.camera.start": "📷 Camera starten",
+    "scan.camera.stop": "Camera stoppen",
+    "scan.upload.title": "Foto uploaden",
+    "scan.upload.help": "Kies een bestaande foto of screenshot als live scannen niet handig is.",
+    "scan.fallback": "Als automatisch decoderen niet lukt, plak dan de <code>MT:</code>-payload direct in het veld bij stap 2.",
+    "payload.title": "2. Payload controleren",
+    "payload.waiting": "Wacht op invoer",
+    "payload.valid": "Geldige MT-code",
+    "payload.invalid": "Ongeldige MT-code",
+    "payload.help": "De <code>MT:</code>-waarde is de Matter-installatiepayload uit de QR-code. Die bevat de gegevens om het apparaat te koppelen, dus behandel hem als gevoelig.",
+    "payload.pairingLabel": "Uitgelezen koppelcode",
+    "payload.warning": "Waarschuwing: deel de uitgelezen QR-inhoud of koppelcode niet met mensen die je niet vertrouwt.",
+    "lookup.request": "Officiele productinfo opvragen",
+    "lookup.refresh": "Officiele productinfo verversen",
+    "lookup.loadingButton": "Officiele info ophalen...",
+    "lookup.pending": "Officiele productinfo opvragen...",
+    "lookup.loadedProduct": "Officiele productinfo geladen.",
+    "lookup.loadedVendor": "Officiele fabrikantinfo geladen.",
+    "lookup.noRecord": "Geen bijpassend officieel productrecord gevonden.",
+    "lookup.unavailable": "Officiele productlookup is nu niet beschikbaar: {message}",
+    "lookup.help": "Optioneel: hiermee worden productrecords opgevraagd via de product-ID.",
+    "lookup.privacy": "<strong>Er wordt geen gevoelige informatie verstuurd.</strong> Alleen de uitgelezen fabrikant- en product-ID's worden gebruikt, niet de setup-PIN of volledige <code>MT:</code>-payload.",
+    "export.title": "3. Exporteren",
+    "export.modeLabel": "Exportmodus",
+    "export.svg": "SVG-export",
+    "export.stl": "STL-export",
+    "export.compatibility": "Compatibiliteitsmodus: geen viewport-afmetingen",
+    "stl.settings": "STL-instellingen",
+    "stl.help": "Gebruik hier de nozzle- en laaginstellingen uit je slicerprofiel. De tool schaalt de QR-code automatisch.",
+    "stl.printer": "Je printer",
+    "stl.nozzle": "Nozzlemaat (mm)",
+    "stl.layer": "Laaghoogte (mm)",
+    "stl.output": "QR-code uitvoer",
+    "stl.width": "Breedte QR-vakje (x nozzle)",
+    "stl.height": "QR-hoogte (lagen)",
+    "stl.squareSize": "Elk QR-vakje wordt ",
+    "stl.qrHeight": "De QR-code wordt ",
+    "stl.tall": " hoog.",
+    "stl.fullSize": "De volledige QR-code wordt ongeveer ",
+    "stl.mirrorOn": "Spiegelen staat aan voor printen aan de onderzijde.",
+    "stl.mirrorOff": "Spiegelen staat uit.",
+    "preview.title": "4. Voorbeeld en download",
+    "preview.moduleShape": "Vorm van QR-modules",
+    "preview.square": "Vierkant",
+    "preview.round": "Ronde stippen",
+    "preview.cornerRadius": "Hoekradius (%)",
+    "preview.orientation": "Printorientatie",
+    "preview.standard": "Standaard",
+    "preview.mirrored": "Onderzijde / gespiegeld",
+    "preview.label": "Voorbeeld",
+    "download.svg": "SVG downloaden",
+    "download.stl": "STL downloaden",
+    "instructions.title": "Instructies voor Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Genereer en download het QR-bestand dat je wilt gebruiken.",
+    "instructions.step2": "Klik met rechts op het onderdeel dat je wilt aanpassen.",
+    "instructions.step3": "Kies <code>Add modifier</code>, daarna <code>Load</code>, en selecteer de QR-SVG of STL.",
+    "instructions.step4": "Plaats de modifier waar je de QR-code wilt hebben.",
+    "instructions.step5": "Verander de filamentkleur zodat hij zichtbaar is op de uiteindelijke print.",
+    "instructions.step6": "Zet spiegelen aan voor het exporteren als de zichtbare QR-code anders omgekeerd zou uitkomen.",
+    "support.title": "Support",
+    "support.copy": "Als deze tool je heeft geholpen een apparaat te redden of tijd te besparen, kun je het project volgen of me hier steunen.",
+    "support.github": "GitHub-repo",
+    "support.kofi": "Steun mij",
+    "details.setupPin": "Setup-PIN",
+    "details.discriminator": "Discriminator",
+    "details.vendorId": "Fabrikant-ID",
+    "details.productId": "Product-ID",
+    "details.version": "Versie",
+    "details.flow": "Flow",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Modelnaam",
+    "details.partNumber": "Onderdeelnummer",
+    "details.vendorPage": "Fabrikantpagina",
+    "details.productPage": "Productpagina",
+    "details.supportPage": "Supportpagina",
+    "details.officialLinks": "Officiele DCL-links",
+    "details.openVendor": "Fabrikantsite openen",
+    "details.openProduct": "Productpagina openen",
+    "details.openSupport": "Supportpagina openen",
+    "flow.standard": "Standaard",
+    "flow.userIntent": "Gebruikersintentie",
+    "flow.custom": "Aangepast",
+    "flow.unknown": "Onbekend ({value})",
+    "status.validQr": "Geldige QR-code.",
+    "status.qrDecoded": "QR-code gedecodeerd.",
+    "status.invalidQr": "Ongeldige QR-code.",
+    "status.scanStopped": "Camerascan gestopt.",
+    "status.cameraUnsupported": "Camerascan wordt niet ondersteund in deze browser.",
+    "status.cameraStarting": "Camera starten...",
+    "status.waitingLiveScan": "Wachten op een live QR-scan...",
+    "status.scanComplete": "Scan voltooid.",
+    "status.liveScanComplete": "Live QR-scan voltooid.",
+    "status.cameraUnavailable": "Geen toegang tot de camera.",
+    "status.cameraFailed": "Camerascan mislukt: {message}",
+    "status.generateFailed": "Kon het QR-label niet genereren: {message}",
+    "status.generateFirstSvg": "Genereer eerst een label voordat je downloadt.",
+    "status.generateFirstStl": "Genereer eerst een label voordat je de STL downloadt.",
+    "status.svgDownloaded": "SVG gedownload.",
+    "status.stlDownloaded": "STL gedownload."
+  },
+  es: {
+    languageName: "Español",
+    "language.label": "Idioma",
+    "theme.label": "Tema",
+    "theme.auto": "Automático",
+    "theme.light": "Claro",
+    "theme.dark": "Oscuro",
+    "page.title": "Herramienta de códigos QR Matter",
+    "page.lead1": "Sube un código QR Matter, descífralo y recupera el código de configuración.",
+    "page.lead2": "Después puedes generar archivos SVG o STL limpios, listos para impresión 3D o etiquetas de reemplazo.",
+    "privacy.local": "Todo se ejecuta localmente en tu navegador. No se envía ningún dato sensible.",
+    "scan.title": "1. Escanear o subir",
+    "scan.camera.title": "Cámara en directo",
+    "scan.camera.help": "Apunta la cámara de tu teléfono o portátil al código QR Matter para escanearlo rápido.",
+    "scan.camera.start": "📷 Iniciar cámara",
+    "scan.camera.stop": "Detener cámara",
+    "scan.upload.title": "Subir foto",
+    "scan.upload.help": "Elige una foto o captura existente si el escaneo en directo no es cómodo.",
+    "scan.fallback": "Si la detección automática no funciona, pega la carga <code>MT:</code> directamente en el campo del paso 2.",
+    "payload.title": "2. Revisar payload",
+    "payload.waiting": "Esperando entrada",
+    "payload.valid": "Código MT válido",
+    "payload.invalid": "Código MT no válido",
+    "payload.help": "El valor <code>MT:</code> es la carga de configuración Matter almacenada en el código QR. Contiene los datos usados para emparejar el dispositivo, así que trátalo como sensible.",
+    "payload.pairingLabel": "Código de emparejamiento extraído",
+    "payload.warning": "Advertencia: no compartas el contenido QR extraído ni el código de emparejamiento con nadie en quien no confíes.",
+    "lookup.request": "Solicitar información oficial del producto",
+    "lookup.refresh": "Actualizar información oficial del producto",
+    "lookup.loadingButton": "Buscando información oficial...",
+    "lookup.pending": "Solicitando información oficial del producto...",
+    "lookup.loadedProduct": "Información oficial del producto cargada.",
+    "lookup.loadedVendor": "Información oficial del fabricante cargada.",
+    "lookup.noRecord": "No se encontró ningún registro oficial de producto coincidente.",
+    "lookup.unavailable": "La búsqueda oficial del producto no está disponible ahora: {message}",
+    "lookup.help": "Opcional: solicita los registros del producto mediante su ID de producto.",
+    "lookup.privacy": "<strong>No se envía información sensible.</strong> Solo se usan los ID de fabricante y producto extraídos, no el PIN de configuración ni la carga <code>MT:</code> completa.",
+    "export.title": "3. Exportar",
+    "export.modeLabel": "Modo de exportación",
+    "export.svg": "Exportar SVG",
+    "export.stl": "Exportar STL",
+    "export.compatibility": "Modo de compatibilidad: sin tamaño de viewport",
+    "stl.settings": "Ajustes STL",
+    "stl.help": "Usa aquí los ajustes de boquilla y capa de tu perfil de laminador. La herramienta ajustará el tamaño del QR automáticamente.",
+    "stl.printer": "Tu impresora",
+    "stl.nozzle": "Tamaño de boquilla (mm)",
+    "stl.layer": "Altura de capa (mm)",
+    "stl.output": "Salida del código QR",
+    "stl.width": "Ancho del módulo QR (x boquilla)",
+    "stl.height": "Altura del QR (capas)",
+    "stl.squareSize": "Cada módulo del QR será de ",
+    "stl.qrHeight": "El QR tendrá ",
+    "stl.tall": " de alto.",
+    "stl.fullSize": "El QR completo medirá aproximadamente ",
+    "stl.mirrorOn": "El reflejo está activado para imprimir por la parte inferior.",
+    "stl.mirrorOff": "El reflejo está desactivado.",
+    "preview.title": "4. Vista previa y descarga",
+    "preview.moduleShape": "Forma de los módulos QR",
+    "preview.square": "Cuadrados",
+    "preview.round": "Puntos redondos",
+    "preview.cornerRadius": "Radio de esquina (%)",
+    "preview.orientation": "Orientación de impresión",
+    "preview.standard": "Estándar",
+    "preview.mirrored": "Parte inferior / reflejado",
+    "preview.label": "Vista previa",
+    "download.svg": "Descargar SVG",
+    "download.stl": "Descargar STL",
+    "instructions.title": "Instrucciones para Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Genera y descarga el archivo QR que quieres usar.",
+    "instructions.step2": "Haz clic derecho en la pieza que quieres modificar.",
+    "instructions.step3": "Elige <code>Add modifier</code>, luego <code>Load</code>, y selecciona el SVG o STL del QR.",
+    "instructions.step4": "Coloca el modificador donde quieras el QR.",
+    "instructions.step5": "Cambia el color del filamento para que se vea en la impresión final.",
+    "instructions.step6": "Si el QR visible final quedaría invertido, activa el reflejo antes de exportar.",
+    "support.title": "Soporte",
+    "support.copy": "Si esta herramienta te ayudó a rescatar un dispositivo o te ahorró tiempo, puedes seguir el proyecto o apoyarme aquí.",
+    "support.github": "Repositorio de GitHub",
+    "support.kofi": "Apóyame",
+    "details.setupPin": "PIN de configuración",
+    "details.discriminator": "Discriminador",
+    "details.vendorId": "ID de fabricante",
+    "details.productId": "ID de producto",
+    "details.version": "Versión",
+    "details.flow": "Flujo",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Nombre del modelo",
+    "details.partNumber": "Número de pieza",
+    "details.vendorPage": "Página del fabricante",
+    "details.productPage": "Página del producto",
+    "details.supportPage": "Página de soporte",
+    "details.officialLinks": "Enlaces DCL oficiales",
+    "details.openVendor": "Abrir sitio del fabricante",
+    "details.openProduct": "Abrir página del producto",
+    "details.openSupport": "Abrir página de soporte",
+    "flow.standard": "Estándar",
+    "flow.userIntent": "Intención del usuario",
+    "flow.custom": "Personalizado",
+    "flow.unknown": "Desconocido ({value})",
+    "status.validQr": "Código QR válido.",
+    "status.qrDecoded": "Código QR descifrado.",
+    "status.invalidQr": "Código QR no válido.",
+    "status.scanStopped": "Escaneo de cámara detenido.",
+    "status.cameraUnsupported": "El escaneo con cámara no es compatible con este navegador.",
+    "status.cameraStarting": "Iniciando cámara...",
+    "status.waitingLiveScan": "Esperando un escaneo QR en directo...",
+    "status.scanComplete": "Escaneo completado.",
+    "status.liveScanComplete": "Escaneo QR en directo completado.",
+    "status.cameraUnavailable": "No se puede acceder a la cámara.",
+    "status.cameraFailed": "Error al escanear con la cámara: {message}",
+    "status.generateFailed": "No se pudo generar la etiqueta QR: {message}",
+    "status.generateFirstSvg": "Genera una etiqueta antes de descargar.",
+    "status.generateFirstStl": "Genera una etiqueta antes de descargar el STL.",
+    "status.svgDownloaded": "SVG descargado.",
+    "status.stlDownloaded": "STL descargado."
+  },
+  de: {
+    languageName: "Deutsch",
+    "language.label": "Sprache",
+    "theme.label": "Design",
+    "theme.auto": "Automatisch",
+    "theme.light": "Hell",
+    "theme.dark": "Dunkel",
+    "page.title": "Matter QR-Code Tool",
+    "page.lead1": "Lade einen Matter QR-Code hoch, decodiere ihn und stelle den Einrichtungscode wieder her.",
+    "page.lead2": "Anschließend kannst du saubere SVG- oder STL-Dateien für 3D-Drucke oder Ersatzetiketten erstellen.",
+    "privacy.local": "Alles läuft lokal in deinem Browser. Es werden keine sensiblen Daten gesendet.",
+    "scan.title": "1. Scannen oder hochladen",
+    "scan.camera.title": "Live-Kamera",
+    "scan.camera.help": "Richte die Kamera deines Telefons oder Laptops auf den Matter QR-Code, um ihn schnell zu scannen.",
+    "scan.camera.start": "📷 Kamera starten",
+    "scan.camera.stop": "Kamera stoppen",
+    "scan.upload.title": "Foto hochladen",
+    "scan.upload.help": "Wähle ein vorhandenes Foto oder einen Screenshot aus, wenn der Live-Scanner gerade nicht praktisch ist.",
+    "scan.fallback": "Wenn die automatische Decodierung nicht funktioniert, füge die <code>MT:</code>-Payload direkt in das Feld in Schritt 2 ein.",
+    "payload.title": "2. Payload prüfen",
+    "payload.waiting": "Wartet auf Eingabe",
+    "payload.valid": "Gültiger MT-Code",
+    "payload.invalid": "Ungültiger MT-Code",
+    "payload.help": "Der <code>MT:</code>-Wert ist die Matter-Einrichtungspayload aus dem QR-Code. Er enthält die Daten zum Koppeln des Geräts und sollte daher vertraulich behandelt werden.",
+    "payload.pairingLabel": "Extrahierter Kopplungscode",
+    "payload.warning": "Warnung: Teile den extrahierten QR-Inhalt oder Kopplungscode nicht mit Personen, denen du nicht vertraust.",
+    "lookup.request": "Offizielle Produktinfos abrufen",
+    "lookup.refresh": "Offizielle Produktinfos aktualisieren",
+    "lookup.loadingButton": "Offizielle Infos werden gesucht...",
+    "lookup.pending": "Offizielle Produktinfos werden abgerufen...",
+    "lookup.loadedProduct": "Offizielle Produktinfos geladen.",
+    "lookup.loadedVendor": "Offizielle Herstellerinfos geladen.",
+    "lookup.noRecord": "Kein passender offizieller Produkteintrag gefunden.",
+    "lookup.unavailable": "Die offizielle Produktsuche ist gerade nicht verfügbar: {message}",
+    "lookup.help": "Optional: Ruft die Produktdatensätze über die Produkt-ID ab.",
+    "lookup.privacy": "<strong>Es werden keine sensiblen Informationen gesendet.</strong> Nur die extrahierten Hersteller- und Produkt-IDs werden verwendet, nicht die Setup-PIN oder die vollständige <code>MT:</code>-Payload.",
+    "export.title": "3. Exportieren",
+    "export.modeLabel": "Exportmodus",
+    "export.svg": "SVG-Export",
+    "export.stl": "STL-Export",
+    "export.compatibility": "Kompatibilitätsmodus: keine Viewport-Größe",
+    "stl.settings": "STL-Einstellungen",
+    "stl.help": "Verwende hier die Düsen- und Schichteinstellungen aus deinem Slicer-Profil. Das Tool skaliert den QR-Code automatisch.",
+    "stl.printer": "Dein Drucker",
+    "stl.nozzle": "Düsengröße (mm)",
+    "stl.layer": "Schichthöhe (mm)",
+    "stl.output": "QR-Code-Ausgabe",
+    "stl.width": "Breite eines QR-Moduls (x Düse)",
+    "stl.height": "QR-Höhe (Schichten)",
+    "stl.squareSize": "Jedes QR-Modul wird ",
+    "stl.qrHeight": "Der QR-Code wird ",
+    "stl.tall": " hoch.",
+    "stl.fullSize": "Der vollständige QR-Code wird ungefähr ",
+    "stl.mirrorOn": "Spiegeln ist für das Drucken auf der Unterseite aktiviert.",
+    "stl.mirrorOff": "Spiegeln ist derzeit deaktiviert.",
+    "preview.title": "4. Vorschau und Download",
+    "preview.moduleShape": "Form der QR-Module",
+    "preview.square": "Quadratisch",
+    "preview.round": "Runde Punkte",
+    "preview.cornerRadius": "Eckenradius (%)",
+    "preview.orientation": "Druckausrichtung",
+    "preview.standard": "Standard",
+    "preview.mirrored": "Unterseite / gespiegelt",
+    "preview.label": "Vorschau",
+    "download.svg": "SVG herunterladen",
+    "download.stl": "STL herunterladen",
+    "instructions.title": "Anleitung für Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Erzeuge und lade die QR-Datei herunter, die du verwenden möchtest.",
+    "instructions.step2": "Klicke mit der rechten Maustaste auf das Teil, das du ändern möchtest.",
+    "instructions.step3": "Wähle <code>Add modifier</code>, dann <code>Load</code>, und wähle die QR-SVG- oder STL-Datei aus.",
+    "instructions.step4": "Platziere den Modifier dort, wo der QR-Code erscheinen soll.",
+    "instructions.step5": "Ändere die Filamentfarbe, damit er auf dem fertigen Druck sichtbar ist.",
+    "instructions.step6": "Wenn der sichtbare QR-Code am Ende gespiegelt wäre, aktiviere vor dem Exportieren die Spiegelung.",
+    "support.title": "Support",
+    "support.copy": "Wenn dir dieses Tool geholfen hat, ein Gerät zu retten oder Zeit zu sparen, kannst du dem Projekt folgen oder mich hier unterstützen.",
+    "support.github": "GitHub-Repo",
+    "support.kofi": "Mich unterstützen",
+    "details.setupPin": "Setup-PIN",
+    "details.discriminator": "Discriminator",
+    "details.vendorId": "Hersteller-ID",
+    "details.productId": "Produkt-ID",
+    "details.version": "Version",
+    "details.flow": "Flow",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Modellname",
+    "details.partNumber": "Teilenummer",
+    "details.vendorPage": "Herstellerseite",
+    "details.productPage": "Produktseite",
+    "details.supportPage": "Support-Seite",
+    "details.officialLinks": "Offizielle DCL-Links",
+    "details.openVendor": "Herstellerseite öffnen",
+    "details.openProduct": "Produktseite öffnen",
+    "details.openSupport": "Support-Seite öffnen",
+    "flow.standard": "Standard",
+    "flow.userIntent": "Nutzerabsicht",
+    "flow.custom": "Benutzerdefiniert",
+    "flow.unknown": "Unbekannt ({value})",
+    "status.validQr": "Gültiger QR-Code.",
+    "status.qrDecoded": "QR-Code decodiert.",
+    "status.invalidQr": "Ungültiger QR-Code.",
+    "status.scanStopped": "Kamerascan gestoppt.",
+    "status.cameraUnsupported": "Kamerascan wird in diesem Browser nicht unterstützt.",
+    "status.cameraStarting": "Kamera wird gestartet...",
+    "status.waitingLiveScan": "Wartet auf einen Live-QR-Scan...",
+    "status.scanComplete": "Scan abgeschlossen.",
+    "status.liveScanComplete": "Live-QR-Scan abgeschlossen.",
+    "status.cameraUnavailable": "Kein Zugriff auf die Kamera möglich.",
+    "status.cameraFailed": "Kamerascan fehlgeschlagen: {message}",
+    "status.generateFailed": "QR-Etikett konnte nicht erzeugt werden: {message}",
+    "status.generateFirstSvg": "Erzeuge zuerst ein Etikett, bevor du es herunterlädst.",
+    "status.generateFirstStl": "Erzeuge zuerst ein Etikett, bevor du die STL-Datei herunterlädst.",
+    "status.svgDownloaded": "SVG heruntergeladen.",
+    "status.stlDownloaded": "STL heruntergeladen."
+  },
+  fr: {
+    languageName: "Français",
+    "language.label": "Langue",
+    "theme.label": "Thème",
+    "theme.auto": "Automatique",
+    "theme.light": "Clair",
+    "theme.dark": "Sombre",
+    "page.title": "Outil de code QR Matter",
+    "page.lead1": "Importez un code QR Matter, décodez-le et récupérez le code de configuration.",
+    "page.lead2": "Vous pouvez ensuite générer des fichiers SVG ou STL propres, prêts pour l'impression 3D ou des étiquettes de remplacement.",
+    "privacy.local": "Tout s'exécute localement dans votre navigateur. Aucune donnée sensible n'est envoyée.",
+    "scan.title": "1. Scanner ou importer",
+    "scan.camera.title": "Caméra en direct",
+    "scan.camera.help": "Pointez la caméra de votre téléphone ou ordinateur vers le code QR Matter pour le scanner rapidement.",
+    "scan.camera.start": "📷 Démarrer la caméra",
+    "scan.camera.stop": "Arrêter la caméra",
+    "scan.upload.title": "Importer une photo",
+    "scan.upload.help": "Choisissez une photo ou une capture d'écran existante si le scanner en direct n'est pas pratique.",
+    "scan.fallback": "Si le décodage automatique ne fonctionne pas, collez directement le payload <code>MT:</code> dans le champ de l'étape 2.",
+    "payload.title": "2. Vérifier le payload",
+    "payload.waiting": "En attente de saisie",
+    "payload.valid": "Code MT valide",
+    "payload.invalid": "Code MT non valide",
+    "payload.help": "La valeur <code>MT:</code> est le payload de configuration Matter stocké dans le code QR. Elle contient les données utilisées pour associer l'appareil, elle doit donc être traitée comme sensible.",
+    "payload.pairingLabel": "Code d'association extrait",
+    "payload.warning": "Attention : ne partagez pas le contenu QR extrait ni le code d'association avec une personne en qui vous n'avez pas confiance.",
+    "lookup.request": "Demander les infos produit officielles",
+    "lookup.refresh": "Actualiser les infos produit officielles",
+    "lookup.loadingButton": "Recherche des infos officielles...",
+    "lookup.pending": "Demande des infos produit officielles...",
+    "lookup.loadedProduct": "Infos produit officielles chargées.",
+    "lookup.loadedVendor": "Infos fabricant officielles chargées.",
+    "lookup.noRecord": "Aucun enregistrement produit officiel correspondant n'a été trouvé.",
+    "lookup.unavailable": "La recherche produit officielle est indisponible pour le moment : {message}",
+    "lookup.help": "Facultatif : cette action demande les enregistrements produit via son ID produit.",
+    "lookup.privacy": "<strong>Aucune information sensible n'est envoyée.</strong> Seuls les ID fabricant et produit extraits sont utilisés, pas le PIN de configuration ni le payload <code>MT:</code> complet.",
+    "export.title": "3. Exporter",
+    "export.modeLabel": "Mode d'export",
+    "export.svg": "Export SVG",
+    "export.stl": "Export STL",
+    "export.compatibility": "Mode compatibilité : aucune taille de viewport",
+    "stl.settings": "Réglages STL",
+    "stl.help": "Utilisez ici les réglages de buse et de couche de votre profil de slicer. L'outil dimensionnera automatiquement le QR.",
+    "stl.printer": "Votre imprimante",
+    "stl.nozzle": "Taille de buse (mm)",
+    "stl.layer": "Hauteur de couche (mm)",
+    "stl.output": "Sortie du code QR",
+    "stl.width": "Largeur du module QR (x buse)",
+    "stl.height": "Hauteur du QR (couches)",
+    "stl.squareSize": "Chaque module QR mesurera ",
+    "stl.qrHeight": "Le QR mesurera ",
+    "stl.tall": " de haut.",
+    "stl.fullSize": "Le QR complet fera environ ",
+    "stl.mirrorOn": "Le miroir est activé pour l'impression sur la face inférieure.",
+    "stl.mirrorOff": "Le miroir est désactivé.",
+    "preview.title": "4. Aperçu et téléchargement",
+    "preview.moduleShape": "Forme des modules QR",
+    "preview.square": "Carrés",
+    "preview.round": "Points ronds",
+    "preview.cornerRadius": "Rayon des angles (%)",
+    "preview.orientation": "Orientation d'impression",
+    "preview.standard": "Standard",
+    "preview.mirrored": "Face inférieure / miroir",
+    "preview.label": "Aperçu",
+    "download.svg": "Télécharger le SVG",
+    "download.stl": "Télécharger le STL",
+    "instructions.title": "Instructions pour Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Générez et téléchargez le fichier QR que vous souhaitez utiliser.",
+    "instructions.step2": "Faites un clic droit sur la pièce que vous souhaitez modifier.",
+    "instructions.step3": "Choisissez <code>Add modifier</code>, puis <code>Load</code>, et sélectionnez le SVG ou STL du QR.",
+    "instructions.step4": "Placez le modificateur à l'endroit souhaité pour le QR.",
+    "instructions.step5": "Changez la couleur du filament pour qu'il soit visible sur l'impression finale.",
+    "instructions.step6": "Si le QR visible final serait inversé, activez le miroir avant d'exporter.",
+    "support.title": "Soutien",
+    "support.copy": "Si cet outil vous a aidé à récupérer un appareil ou vous a fait gagner du temps, vous pouvez suivre le projet ou me soutenir ici.",
+    "support.github": "Dépôt GitHub",
+    "support.kofi": "Me soutenir",
+    "details.setupPin": "PIN de configuration",
+    "details.discriminator": "Discriminateur",
+    "details.vendorId": "ID fabricant",
+    "details.productId": "ID produit",
+    "details.version": "Version",
+    "details.flow": "Flux",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Nom du modèle",
+    "details.partNumber": "Référence",
+    "details.vendorPage": "Page fabricant",
+    "details.productPage": "Page produit",
+    "details.supportPage": "Page support",
+    "details.officialLinks": "Liens DCL officiels",
+    "details.openVendor": "Ouvrir le site du fabricant",
+    "details.openProduct": "Ouvrir la page produit",
+    "details.openSupport": "Ouvrir la page support",
+    "flow.standard": "Standard",
+    "flow.userIntent": "Intention utilisateur",
+    "flow.custom": "Personnalisé",
+    "flow.unknown": "Inconnu ({value})",
+    "status.validQr": "Code QR valide.",
+    "status.qrDecoded": "Code QR décodé.",
+    "status.invalidQr": "Code QR non valide.",
+    "status.scanStopped": "Scan caméra arrêté.",
+    "status.cameraUnsupported": "Le scan par caméra n'est pas pris en charge dans ce navigateur.",
+    "status.cameraStarting": "Démarrage de la caméra...",
+    "status.waitingLiveScan": "En attente d'un scan QR en direct...",
+    "status.scanComplete": "Scan terminé.",
+    "status.liveScanComplete": "Scan QR en direct terminé.",
+    "status.cameraUnavailable": "Impossible d'accéder à la caméra.",
+    "status.cameraFailed": "Échec du scan caméra : {message}",
+    "status.generateFailed": "Impossible de générer l'étiquette QR : {message}",
+    "status.generateFirstSvg": "Générez une étiquette avant de télécharger.",
+    "status.generateFirstStl": "Générez une étiquette avant de télécharger le STL.",
+    "status.svgDownloaded": "SVG téléchargé.",
+    "status.stlDownloaded": "STL téléchargé."
+  },
+  it: {
+    languageName: "Italiano",
+    "language.label": "Lingua",
+    "theme.label": "Tema",
+    "theme.auto": "Automatico",
+    "theme.light": "Chiaro",
+    "theme.dark": "Scuro",
+    "page.title": "Strumento QR Matter",
+    "page.lead1": "Carica un codice QR Matter, decodificalo e recupera il codice di configurazione.",
+    "page.lead2": "Poi puoi generare file SVG o STL puliti, pronti per la stampa 3D o per etichette sostitutive.",
+    "privacy.local": "Tutto viene eseguito localmente nel browser. Nessun dato sensibile viene inviato altrove.",
+    "scan.title": "1. Scansiona o carica",
+    "scan.camera.title": "Fotocamera live",
+    "scan.camera.help": "Punta la fotocamera del telefono o del portatile verso il codice QR Matter per una scansione rapida.",
+    "scan.camera.start": "📷 Avvia fotocamera",
+    "scan.camera.stop": "Ferma fotocamera",
+    "scan.upload.title": "Carica foto",
+    "scan.upload.help": "Scegli una foto o uno screenshot esistente se la scansione live non è comoda.",
+    "scan.fallback": "Se la decodifica automatica non funziona, incolla il payload <code>MT:</code> direttamente nel campo del passaggio 2.",
+    "payload.title": "2. Controlla il payload",
+    "payload.waiting": "In attesa di input",
+    "payload.valid": "Codice MT valido",
+    "payload.invalid": "Codice MT non valido",
+    "payload.help": "Il valore <code>MT:</code> è il payload di configurazione Matter salvato nel codice QR. Contiene i dati usati per associare il dispositivo, quindi trattalo come informazione sensibile.",
+    "payload.pairingLabel": "Codice di associazione estratto",
+    "payload.warning": "Attenzione: non condividere il contenuto QR estratto o il codice di associazione con persone di cui non ti fidi.",
+    "lookup.request": "Richiedi informazioni ufficiali sul prodotto",
+    "lookup.refresh": "Aggiorna informazioni ufficiali sul prodotto",
+    "lookup.loadingButton": "Ricerca informazioni ufficiali...",
+    "lookup.pending": "Richiesta delle informazioni ufficiali sul prodotto...",
+    "lookup.loadedProduct": "Informazioni ufficiali sul prodotto caricate.",
+    "lookup.loadedVendor": "Informazioni ufficiali sul produttore caricate.",
+    "lookup.noRecord": "Nessun record ufficiale del prodotto corrispondente trovato.",
+    "lookup.unavailable": "La ricerca ufficiale del prodotto non è disponibile ora: {message}",
+    "lookup.help": "Opzionale: richiede i record del prodotto tramite il suo ID prodotto.",
+    "lookup.privacy": "<strong>Nessuna informazione sensibile viene inviata.</strong> Vengono usati solo gli ID produttore e prodotto estratti, non il PIN di configurazione o il payload <code>MT:</code> completo.",
+    "export.title": "3. Esporta",
+    "export.modeLabel": "Modalità di esportazione",
+    "export.svg": "Esporta SVG",
+    "export.stl": "Esporta STL",
+    "export.compatibility": "Modalità compatibilità: nessuna dimensione viewport",
+    "stl.settings": "Impostazioni STL",
+    "stl.help": "Usa qui le impostazioni di ugello e layer del tuo profilo slicer. Lo strumento dimensionerà automaticamente il QR.",
+    "stl.printer": "La tua stampante",
+    "stl.nozzle": "Dimensione ugello (mm)",
+    "stl.layer": "Altezza layer (mm)",
+    "stl.output": "Output codice QR",
+    "stl.width": "Larghezza modulo QR (x ugello)",
+    "stl.height": "Altezza QR (layer)",
+    "stl.squareSize": "Ogni modulo QR sarà ",
+    "stl.qrHeight": "Il QR sarà alto ",
+    "stl.tall": ".",
+    "stl.fullSize": "Il QR completo sarà circa ",
+    "stl.mirrorOn": "La specchiatura è attiva per la stampa dal lato inferiore.",
+    "stl.mirrorOff": "La specchiatura è disattivata.",
+    "preview.title": "4. Anteprima e download",
+    "preview.moduleShape": "Forma dei moduli QR",
+    "preview.square": "Quadrati",
+    "preview.round": "Punti rotondi",
+    "preview.cornerRadius": "Raggio angoli (%)",
+    "preview.orientation": "Orientamento di stampa",
+    "preview.standard": "Standard",
+    "preview.mirrored": "Lato inferiore / specchiato",
+    "preview.label": "Anteprima",
+    "download.svg": "Scarica SVG",
+    "download.stl": "Scarica STL",
+    "instructions.title": "Istruzioni per Bambu Lab / OrcaSlicer",
+    "instructions.step1": "Genera e scarica il file QR che vuoi usare.",
+    "instructions.step2": "Fai clic destro sulla parte che vuoi modificare.",
+    "instructions.step3": "Scegli <code>Add modifier</code>, poi <code>Load</code>, e seleziona l'SVG o STL del QR.",
+    "instructions.step4": "Posiziona il modificatore dove vuoi il QR.",
+    "instructions.step5": "Cambia il colore del filamento così sarà visibile nella stampa finale.",
+    "instructions.step6": "Se il QR visibile finale risulterebbe invertito, attiva la specchiatura prima di esportare.",
+    "support.title": "Supporto",
+    "support.copy": "Se questo strumento ti ha aiutato a recuperare un dispositivo o ti ha fatto risparmiare tempo, puoi seguire il progetto o supportarmi qui.",
+    "support.github": "Repository GitHub",
+    "support.kofi": "Supportami",
+    "details.setupPin": "PIN di configurazione",
+    "details.discriminator": "Discriminatore",
+    "details.vendorId": "ID produttore",
+    "details.productId": "ID prodotto",
+    "details.version": "Versione",
+    "details.flow": "Flusso",
+    "details.rendezvous": "Rendezvous",
+    "details.modelName": "Nome modello",
+    "details.partNumber": "Numero parte",
+    "details.vendorPage": "Pagina produttore",
+    "details.productPage": "Pagina prodotto",
+    "details.supportPage": "Pagina supporto",
+    "details.officialLinks": "Link DCL ufficiali",
+    "details.openVendor": "Apri sito del produttore",
+    "details.openProduct": "Apri pagina prodotto",
+    "details.openSupport": "Apri pagina supporto",
+    "flow.standard": "Standard",
+    "flow.userIntent": "Intento utente",
+    "flow.custom": "Personalizzato",
+    "flow.unknown": "Sconosciuto ({value})",
+    "status.validQr": "Codice QR valido.",
+    "status.qrDecoded": "Codice QR decodificato.",
+    "status.invalidQr": "Codice QR non valido.",
+    "status.scanStopped": "Scansione fotocamera fermata.",
+    "status.cameraUnsupported": "La scansione con fotocamera non è supportata in questo browser.",
+    "status.cameraStarting": "Avvio fotocamera...",
+    "status.waitingLiveScan": "In attesa di una scansione QR live...",
+    "status.scanComplete": "Scansione completata.",
+    "status.liveScanComplete": "Scansione QR live completata.",
+    "status.cameraUnavailable": "Impossibile accedere alla fotocamera.",
+    "status.cameraFailed": "Scansione con fotocamera non riuscita: {message}",
+    "status.generateFailed": "Impossibile generare l'etichetta QR: {message}",
+    "status.generateFirstSvg": "Genera un'etichetta prima di scaricare.",
+    "status.generateFirstStl": "Genera un'etichetta prima di scaricare l'STL.",
+    "status.svgDownloaded": "SVG scaricato.",
+    "status.stlDownloaded": "STL scaricato."
+  }
+};
+const SUPPORTED_LANGUAGES = Object.keys(TRANSLATIONS);
+let currentLanguage = "en";
 let lastAutoManualCode = "";
 let currentPayload = null;
 let liveLookupData = null;
@@ -122,6 +836,168 @@ const modelLookupCache = new Map();
 let exportMode = "stl";
 let cameraScanControls = null;
 let cameraScanActive = false;
+let currentTheme = "auto";
+const themeMediaQuery = window.matchMedia?.("(prefers-color-scheme: dark)") || null;
+
+function getLanguageCode(languageTag) {
+  return String(languageTag || "").toLowerCase().split("-")[0];
+}
+
+function getInitialLanguage() {
+  let storedLanguage = "";
+
+  try {
+    storedLanguage = getLanguageCode(window.localStorage.getItem(LANGUAGE_STORAGE_KEY));
+  } catch {
+    storedLanguage = "";
+  }
+
+  if (SUPPORTED_LANGUAGES.includes(storedLanguage)) {
+    return storedLanguage;
+  }
+
+  for (const languageTag of navigator.languages || [navigator.language]) {
+    const languageCode = getLanguageCode(languageTag);
+    if (SUPPORTED_LANGUAGES.includes(languageCode)) {
+      return languageCode;
+    }
+  }
+
+  return "en";
+}
+
+function getThemeMode(theme) {
+  return ["auto", "light", "dark"].includes(theme) ? theme : "auto";
+}
+
+function getInitialTheme() {
+  try {
+    return getThemeMode(window.localStorage.getItem(THEME_STORAGE_KEY));
+  } catch {
+    return "auto";
+  }
+}
+
+function getResolvedTheme(theme = currentTheme) {
+  return theme === "auto" && themeMediaQuery?.matches ? "dark" : theme === "dark" ? "dark" : "light";
+}
+
+function t(key, replacements = {}) {
+  let value = TRANSLATIONS[currentLanguage]?.[key] ?? TRANSLATIONS.en[key] ?? key;
+
+  for (const [replacementKey, replacementValue] of Object.entries(replacements)) {
+    value = value.replaceAll(`{${replacementKey}}`, String(replacementValue));
+  }
+
+  return value;
+}
+
+function applyTranslations() {
+  document.documentElement.lang = currentLanguage;
+  document.title = t("page.title");
+
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.innerHTML = t(element.dataset.i18n);
+  });
+
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
+
+  for (const optionButton of themeOptionButtons) {
+    const themeMode = getThemeMode(optionButton.dataset.themeOption);
+    const themeLabel = t(`theme.${themeMode}`);
+    optionButton.title = themeLabel;
+    optionButton.setAttribute("aria-label", themeLabel);
+  }
+
+  if (languageToggle) {
+    languageToggle.textContent = LANGUAGE_FLAGS[currentLanguage] || LANGUAGE_FLAGS.en;
+    languageToggle.title = TRANSLATIONS[currentLanguage]?.languageName || TRANSLATIONS.en.languageName;
+  }
+
+  for (const optionButton of languageOptionButtons) {
+    const isActive = optionButton.dataset.languageOption === currentLanguage;
+    const languageCode = getLanguageCode(optionButton.dataset.languageOption);
+    const languageName = TRANSLATIONS[languageCode]?.languageName || TRANSLATIONS.en.languageName;
+    optionButton.title = languageName;
+    optionButton.setAttribute("aria-label", languageName);
+    optionButton.classList.toggle("is-active", isActive);
+    optionButton.setAttribute("aria-selected", String(isActive));
+  }
+
+  updateCameraUi(cameraScanActive);
+  updatePayloadValidity(currentPayload ? "valid" : dataInput.value.trim() ? "invalid" : "empty");
+  updateLookupButtonState();
+  updateDetailsDisplay(currentPayload);
+  updateStlSummary();
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = getResolvedTheme();
+
+  if (themeToggle) {
+    themeToggle.textContent = THEME_ICONS[currentTheme] || THEME_ICONS.auto;
+    themeToggle.title = t(`theme.${currentTheme}`) || THEME_NAMES[currentTheme] || THEME_NAMES.auto;
+  }
+
+  for (const optionButton of themeOptionButtons) {
+    const isActive = optionButton.dataset.themeOption === currentTheme;
+    optionButton.classList.toggle("is-active", isActive);
+    optionButton.setAttribute("aria-selected", String(isActive));
+  }
+}
+
+function setThemeMenuOpen(isOpen) {
+  if (!themeMenu || !themeToggle) {
+    return;
+  }
+
+  themeMenu.hidden = !isOpen;
+  themeToggle.setAttribute("aria-expanded", String(isOpen));
+}
+
+function setLanguageMenuOpen(isOpen) {
+  if (!languageMenu || !languageToggle) {
+    return;
+  }
+
+  languageMenu.hidden = !isOpen;
+  languageToggle.setAttribute("aria-expanded", String(isOpen));
+}
+
+function setCurrentLanguage(nextLanguage) {
+  const languageCode = getLanguageCode(nextLanguage);
+
+  if (!SUPPORTED_LANGUAGES.includes(languageCode)) {
+    return;
+  }
+
+  currentLanguage = languageCode;
+  try {
+    window.localStorage.setItem(LANGUAGE_STORAGE_KEY, currentLanguage);
+  } catch {
+    // Language choice is still applied for this page load if storage is unavailable.
+  }
+  applyTranslations();
+  applyTheme();
+}
+
+function setCurrentTheme(nextTheme) {
+  currentTheme = getThemeMode(nextTheme);
+  try {
+    window.localStorage.setItem(THEME_STORAGE_KEY, currentTheme);
+  } catch {
+    // Theme choice is still applied for this page load if storage is unavailable.
+  }
+  applyTheme();
+}
+
+function handleSystemThemeChange() {
+  if (currentTheme === "auto") {
+    applyTheme();
+  }
+}
 
 function formatSvgNumber(value) {
   return Number.parseFloat(value.toFixed(3)).toString();
@@ -170,8 +1046,8 @@ function updateCameraUi(isActive) {
   if (startCameraBtn) {
     startCameraBtn.classList.toggle("camera-toggle-active", isActive);
     startCameraBtn.textContent = isActive
-      ? "Stop Camera Scan"
-      : "📷 Start Camera Scan";
+      ? t("scan.camera.stop")
+      : t("scan.camera.start");
   }
 }
 
@@ -198,22 +1074,23 @@ function updatePayloadValidity(state) {
 
   if (state === "valid") {
     payloadValidity.classList.add("is-valid");
-    payloadValidity.innerHTML = '<span class="validity-icon">✓</span><span>Valid MT Code</span>';
+    payloadValidity.innerHTML = `<span class="validity-icon">✓</span><span>${escapeHtml(t("payload.valid"))}</span>`;
     return;
   }
 
   if (state === "invalid") {
     payloadValidity.classList.add("is-invalid");
-    payloadValidity.innerHTML = '<span class="validity-icon">✕</span><span>Invalid MT Code</span>';
+    payloadValidity.innerHTML = `<span class="validity-icon">✕</span><span>${escapeHtml(t("payload.invalid"))}</span>`;
     return;
   }
 
-  payloadValidity.innerHTML = '<span class="validity-icon">-</span><span>Waiting For Input</span>';
+  payloadValidity.innerHTML = `<span class="validity-icon">-</span><span>${escapeHtml(t("payload.waiting"))}</span>`;
 }
 
 function updateManualDisplay(value) {
-  manualDisplay.textContent = value || "-";
-  manualDisplay.style.color = value ? "#111" : "#888";
+  const hasValue = Boolean(value);
+  manualDisplay.textContent = hasValue ? value : "-";
+  manualDisplay.classList.toggle("is-empty", !hasValue);
 }
 
 function setLookupStatus(message, state = "success") {
@@ -276,14 +1153,14 @@ function updateLookupButtonState() {
   lookupBtn.disabled = !hasPayload || liveLookupPending;
 
   if (liveLookupPending) {
-    lookupBtn.textContent = "Looking Up Official Info...";
+    lookupBtn.textContent = t("lookup.loadingButton");
     return;
   }
 
   lookupBtn.textContent =
     getActiveLookupData(currentPayload)
-      ? "Refresh Official Product Info"
-      : "Request Official Product Info";
+      ? t("lookup.refresh")
+      : t("lookup.request");
 }
 
 function updateExportModeUi() {
@@ -302,9 +1179,9 @@ function updateExportModeUi() {
 }
 
 function formatCommissioningFlow(value) {
-  if (value === 0) return "Standard";
-  if (value === 1) return "User-Intent";
-  if (value === 2) return "Custom";
+  if (value === 0) return t("flow.standard");
+  if (value === 1) return t("flow.userIntent");
+  if (value === 2) return t("flow.custom");
   return String(value);
 }
 
@@ -316,7 +1193,7 @@ function formatRendezvousInformation(value) {
   if (value & 0x04) methods.push("On-network");
 
   if (methods.length === 0) {
-    return `Unknown (${value})`;
+    return t("flow.unknown", { value });
   }
 
   return methods.join(", ");
@@ -411,37 +1288,37 @@ function updateDetailsDisplay(payload) {
 
   const details = [
     {
-      key: "Setup PIN",
+      key: t("details.setupPin"),
       value: payload.setupPinCode,
       help: "The onboarding passcode used during commissioning."
     },
     {
-      key: "Discriminator",
+      key: t("details.discriminator"),
       value: payload.discriminator,
       help: "A short identifier that helps commissioners find the right device during setup."
     },
     {
-      key: "Vendor ID",
+      key: t("details.vendorId"),
       value: formatVendorDisplay(payload.vendorId, vendorRecord),
       help: vendorHelp
     },
     {
-      key: "Product ID",
+      key: t("details.productId"),
       value: formatProductDisplay(payload.vendorId, payload.productId, modelRecord),
       help: productHelpParts.join(" ")
     },
     {
-      key: "Version",
+      key: t("details.version"),
       value: payload.version,
       help: "The payload format version encoded in the QR value."
     },
     {
-      key: "Flow",
+      key: t("details.flow"),
       value: formatCommissioningFlow(payload.commissioningFlow),
       help: "How the device expects commissioning to begin."
     },
     {
-      key: "Rendezvous",
+      key: t("details.rendezvous"),
       value: formatRendezvousInformation(payload.rendezvousInformation),
       help: "The discovery or transport methods the device supports for setup."
     }
@@ -449,7 +1326,7 @@ function updateDetailsDisplay(payload) {
 
   if (modelRecord?.productName && modelRecord.productName !== modelRecord.productLabel) {
     details.push({
-      key: "Model Name",
+      key: t("details.modelName"),
       value: modelRecord.productName,
       help: "The shorter product name from the official CSA DCL model record."
     });
@@ -457,7 +1334,7 @@ function updateDetailsDisplay(payload) {
 
   if (modelRecord?.partNumber) {
     details.push({
-      key: "Part Number",
+      key: t("details.partNumber"),
       value: modelRecord.partNumber,
       help: "The manufacturer part number listed in the official CSA DCL model record."
     });
@@ -467,24 +1344,24 @@ function updateDetailsDisplay(payload) {
 
   if (vendorRecord?.vendorLandingPageURL) {
     dclLinks.push({
-      key: "Vendor Page",
-      valueHtml: buildLinkValue(vendorRecord.vendorLandingPageURL, "Open vendor site"),
+      key: t("details.vendorPage"),
+      valueHtml: buildLinkValue(vendorRecord.vendorLandingPageURL, t("details.openVendor")),
       help: "The official vendor landing page from the CSA DCL record."
     });
   }
 
   if (modelRecord?.productUrl) {
     dclLinks.push({
-      key: "Product Page",
-      valueHtml: buildLinkValue(modelRecord.productUrl, "Open product page"),
+      key: t("details.productPage"),
+      valueHtml: buildLinkValue(modelRecord.productUrl, t("details.openProduct")),
       help: "The product page published in the official CSA DCL model record."
     });
   }
 
   if (modelRecord?.supportUrl) {
     dclLinks.push({
-      key: "Support Page",
-      valueHtml: buildLinkValue(modelRecord.supportUrl, "Open support page"),
+      key: t("details.supportPage"),
+      valueHtml: buildLinkValue(modelRecord.supportUrl, t("details.openSupport")),
       help: "The support page published in the official CSA DCL model record."
     });
   }
@@ -492,7 +1369,7 @@ function updateDetailsDisplay(payload) {
   const linkSection = dclLinks.length
     ? `
       <div class="detail-group-card">
-        <div class="detail-section-title">Official DCL Links</div>
+        <div class="detail-section-title">${escapeHtml(t("details.officialLinks"))}</div>
         <div class="details-links">
           ${renderDetailCards(dclLinks)}
         </div>
@@ -637,7 +1514,7 @@ async function lookupOfficialMatterInfo() {
 
   liveLookupPending = true;
   updateLookupButtonState();
-  setLookupStatus("Requesting official product info...", "pending");
+  setLookupStatus(t("lookup.pending"), "pending");
 
   try {
     const [vendorResult, modelResult] = await Promise.allSettled([
@@ -663,11 +1540,11 @@ async function lookupOfficialMatterInfo() {
       updateDetailsDisplay(currentPayload);
 
       if (vendorRecord && modelRecord) {
-        setLookupStatus("Loaded official product info.");
+        setLookupStatus(t("lookup.loadedProduct"));
       } else if (vendorRecord) {
-        setLookupStatus("Loaded official vendor info.");
+        setLookupStatus(t("lookup.loadedVendor"));
       } else {
-        setLookupStatus("Loaded official product info.");
+        setLookupStatus(t("lookup.loadedProduct"));
       }
 
       return;
@@ -681,7 +1558,7 @@ async function lookupOfficialMatterInfo() {
     updateDetailsDisplay(currentPayload);
 
     if (vendorResult.status === "fulfilled" && modelResult.status === "fulfilled") {
-      setLookupStatus("No matching official product record was found.");
+      setLookupStatus(t("lookup.noRecord"));
       return;
     }
 
@@ -690,7 +1567,7 @@ async function lookupOfficialMatterInfo() {
     clearLiveLookupData();
     updateDetailsDisplay(currentPayload);
     setLookupStatus(
-      `Official product lookup is unavailable right now: ${error.message}`,
+      t("lookup.unavailable", { message: error.message }),
       "error"
     );
   } finally {
@@ -732,14 +1609,14 @@ function updateStlSummary() {
   const { stl } = getExportOptions();
   const summaryLines = [
     buildStlSummaryLine([
-      { text: "Each QR square will be " },
+      { text: t("stl.squareSize") },
       { strong: formatMillimeters(stl.moduleSizeMm) },
       { text: "." }
     ]),
     buildStlSummaryLine([
-      { text: "The QR will be " },
+      { text: t("stl.qrHeight") },
       { strong: formatMillimeters(stl.qrHeightMm) },
-      { text: " tall." }
+      { text: t("stl.tall") }
     ])
   ];
   const data = getNormalizedMatterQrText(dataInput.value);
@@ -748,7 +1625,7 @@ function updateStlSummary() {
     try {
       const overallSize = getQrCanvasSize(data, stl.moduleSizeMm);
       summaryLines.push(buildStlSummaryLine([
-        { text: "The full QR will be about " },
+        { text: t("stl.fullSize") },
         { strong: `${formatMillimeters(overallSize)} x ${formatMillimeters(overallSize)}` },
         { text: "." }
       ]));
@@ -761,8 +1638,8 @@ function updateStlSummary() {
     buildStlSummaryLine([
       {
         text: stl.mirror
-          ? "Mirroring is enabled for underside printing."
-          : "Mirroring is currently off."
+          ? t("stl.mirrorOn")
+          : t("stl.mirrorOff")
       }
     ])
   );
@@ -806,13 +1683,13 @@ function getNormalizedMatterQrText(text) {
   return payload ? `${MATTER_QR_PREFIX}${payload}` : "";
 }
 
-function applyDecodedQrText(text, successMessage = "QR decoded.") {
+function applyDecodedQrText(text, successMessage = t("status.qrDecoded")) {
   dataInput.value = text;
   syncManualCodeFromData({ force: true });
   generateLabel();
   setStatus(
     lastAutoManualCode
-      ? "Valid QR code."
+      ? t("status.validQr")
       : successMessage
   );
 }
@@ -856,13 +1733,13 @@ async function startCameraScan() {
 
   if (cameraScanActive) {
     stopCameraScan();
-    setCameraStatus("Camera scan stopped.");
+    setCameraStatus(t("status.scanStopped"));
     setStatus("");
     return;
   }
 
   if (!navigator.mediaDevices?.getUserMedia) {
-    setStatus("Camera scanning is not supported in this browser.", true);
+    setStatus(t("status.cameraUnsupported"), true);
     return;
   }
 
@@ -870,8 +1747,8 @@ async function startCameraScan() {
   cameraScanActive = true;
   updateCameraUi(true);
   focusCameraPanel();
-  setCameraStatus("Starting camera...");
-  setStatus("Waiting for a live QR scan...");
+  setCameraStatus(t("status.cameraStarting"));
+  setStatus(t("status.waitingLiveScan"));
 
   try {
     cameraScanControls = await cameraReader.decodeFromConstraints(
@@ -888,16 +1765,16 @@ async function startCameraScan() {
 
         const text = result.getText();
         stopCameraScan({ preserveStatus: true });
-        setCameraStatus("Scan complete.");
-        applyDecodedQrText(text, "Live QR scan complete.");
+        setCameraStatus(t("status.scanComplete"));
+        applyDecodedQrText(text, t("status.liveScanComplete"));
       }
     );
 
     setCameraStatus("");
   } catch (error) {
     stopCameraScan({ preserveStatus: true });
-    setCameraStatus("Unable to access the camera.", true);
-    setStatus(`Camera scan failed: ${error.message}`, true);
+    setCameraStatus(t("status.cameraUnavailable"), true);
+    setStatus(t("status.cameraFailed", { message: error.message }), true);
   }
 }
 
@@ -1154,7 +2031,7 @@ fileInput.addEventListener("change", async (e) => {
     const result = await imageReader.decodeFromImageUrl(url);
     applyDecodedQrText(result.getText());
   } catch (error) {
-    setStatus("Invalid QR code.", true);
+    setStatus(t("status.invalidQr"), true);
   } finally {
     URL.revokeObjectURL(url);
     fileInput.value = "";
@@ -2398,29 +3275,30 @@ async function generateLabel() {
     finalSVG = downloadNormalSvg.svg;
     output.innerHTML = previewNormalSvg.svg;
   } catch (error) {
-    renderPreviewError(`Could not generate the QR label: ${error.message}`);
-    setStatus(`Could not generate the QR label: ${error.message}`, true);
+    const message = t("status.generateFailed", { message: error.message });
+    renderPreviewError(message);
+    setStatus(message, true);
   }
 }
 
 function downloadLabel() {
   if (!finalSVG) {
-    setStatus("Generate a label before downloading.", true);
+    setStatus(t("status.generateFirstSvg"), true);
     return;
   }
 
   downloadBlob(finalSVG, "image/svg+xml", "matter-label.svg");
-  setStatus("SVG downloaded.");
+  setStatus(t("status.svgDownloaded"));
 }
 
 function downloadStl() {
   if (!finalSTL) {
-    setStatus("Generate a label before downloading the STL.", true);
+    setStatus(t("status.generateFirstStl"), true);
     return;
   }
 
   downloadBlob(finalSTL, "model/stl", "matter-label.stl");
-  setStatus("STL downloaded.");
+  setStatus(t("status.stlDownloaded"));
 }
 
 function downloadBlob(contents, mimeType, filename) {
@@ -2491,6 +3369,61 @@ stlModeBtn.addEventListener("keydown", handleExportModeKeydown);
 downloadBtn.addEventListener("click", downloadLabel);
 downloadStlBtn.addEventListener("click", downloadStl);
 startCameraBtn?.addEventListener("click", startCameraScan);
+themeToggle?.addEventListener("click", () => {
+  setLanguageMenuOpen(false);
+  setThemeMenuOpen(Boolean(themeMenu?.hidden));
+});
+
+for (const optionButton of themeOptionButtons) {
+  optionButton.addEventListener("click", () => {
+    setCurrentTheme(optionButton.dataset.themeOption);
+    setThemeMenuOpen(false);
+    themeToggle?.focus();
+  });
+}
+
+languageToggle?.addEventListener("click", () => {
+  setThemeMenuOpen(false);
+  setLanguageMenuOpen(Boolean(languageMenu?.hidden));
+});
+
+for (const optionButton of languageOptionButtons) {
+  optionButton.addEventListener("click", () => {
+    setCurrentLanguage(optionButton.dataset.languageOption);
+    setLanguageMenuOpen(false);
+    languageToggle?.focus();
+  });
+}
+
+document.addEventListener("click", (event) => {
+  const target = event.target;
+  if (!(target instanceof Node)) {
+    return;
+  }
+
+  if (themeMenu && !themeMenu.hidden && !themeMenu.contains(target) && !themeToggle?.contains(target)) {
+    setThemeMenuOpen(false);
+  }
+
+  if (languageMenu && !languageMenu.hidden && !languageMenu.contains(target) && !languageToggle?.contains(target)) {
+    setLanguageMenuOpen(false);
+  }
+});
+
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape") {
+    setThemeMenuOpen(false);
+    setLanguageMenuOpen(false);
+  }
+});
+
+if (themeMediaQuery) {
+  if (typeof themeMediaQuery.addEventListener === "function") {
+    themeMediaQuery.addEventListener("change", handleSystemThemeChange);
+  } else {
+    themeMediaQuery.addListener?.(handleSystemThemeChange);
+  }
+}
 
 for (const input of [bambuSafeModeInput, mirrorOutputInput, moduleShapeInput].filter(Boolean)) {
   input.addEventListener("change", () => {
@@ -2519,6 +3452,8 @@ for (const input of [
   });
 }
 
+currentLanguage = getInitialLanguage();
+currentTheme = getInitialTheme();
 updateLookupButtonState();
 updateExportModeUi();
 updateCornerRadiusInputState();
@@ -2526,3 +3461,5 @@ updateStlSummary();
 updatePayloadValidity("empty");
 updateCameraUi(false);
 setStatus("");
+applyTranslations();
+applyTheme();

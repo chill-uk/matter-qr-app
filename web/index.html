@@ -5,6 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" type="image/png" href="favicon.png?v=1" />
   <title>Matter QR Helper</title>
+  <script>
+    (() => {
+      try {
+        const theme = localStorage.getItem("matterQrTheme") || "auto";
+        const prefersDark = window.matchMedia?.("(prefers-color-scheme: dark)")?.matches;
+        document.documentElement.dataset.theme = theme === "dark" || (theme === "auto" && prefersDark) ? "dark" : "light";
+      } catch {
+        document.documentElement.dataset.theme = "light";
+      }
+    })();
+  </script>
   <style>
     :root {
       --bg: #f3efe7;
@@ -15,12 +26,93 @@
       --muted: #6c6358;
       --accent: #1f6a53;
       --accent-strong: #154b3b;
+      --control-bg: rgba(255, 255, 255, 0.72);
+      --panel-bg: rgba(255, 255, 255, 0.62);
+      --panel-bg-soft: rgba(255, 255, 255, 0.48);
+      --panel-bg-strong: rgba(255, 255, 255, 0.7);
+      --preview-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 245, 238, 0.92));
+      --preview-inset: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      --qr-bg: #ffffff;
+      --code-bg: #f7f4ee;
+      --hairline: rgba(39, 33, 27, 0.12);
+      --hairline-soft: rgba(39, 33, 27, 0.08);
+      --menu-bg: rgba(45, 48, 47, 0.96);
+      --menu-active-bg: rgba(255, 255, 255, 0.16);
+      --menu-active-border: rgba(255, 255, 255, 0.2);
+      --success-bg: rgba(236, 248, 243, 0.95);
+      --success-border: rgba(31, 106, 83, 0.26);
+      --error-bg: rgba(255, 240, 238, 0.96);
+      --error-border: rgba(185, 72, 58, 0.24);
+      --error-text: #9b3125;
       --danger-bg: #fff0ee;
       --danger-border: rgba(185, 72, 58, 0.34);
       --danger-text: #8a2f25;
       --warning-bg: #fff5d8;
       --warning-border: #e4cf8e;
+      --warning-text: #5b4b00;
+      --footer-border: rgba(72, 118, 185, 0.22);
+      --footer-bg: linear-gradient(135deg, rgba(72, 118, 185, 0.08), var(--control-bg));
+      --footer-link-bg: rgba(247, 251, 255, 0.9);
+      --footer-link-hover-bg: rgba(255, 255, 255, 0.96);
+      --footer-link-border: rgba(72, 118, 185, 0.24);
+      --footer-link-text: #2f5d93;
+      --footer-shadow: 0 14px 28px rgba(48, 84, 131, 0.08);
+      --pairing-value: var(--text);
+      --pairing-placeholder: var(--muted);
+      --body-bg:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 38%),
+        linear-gradient(180deg, #f7f3ea 0%, var(--bg) 100%);
       --shadow: 0 18px 40px rgba(70, 53, 28, 0.08);
+      color-scheme: light;
+    }
+
+    :root[data-theme="dark"] {
+      --bg: #171a18;
+      --surface: rgba(30, 34, 31, 0.9);
+      --surface-strong: #242923;
+      --border: #475047;
+      --text: #f3f0e8;
+      --muted: #b9b4aa;
+      --accent: #61b38d;
+      --accent-strong: #8fd3ad;
+      --control-bg: rgba(37, 42, 38, 0.88);
+      --panel-bg: rgba(36, 41, 37, 0.72);
+      --panel-bg-soft: rgba(34, 39, 35, 0.62);
+      --panel-bg-strong: rgba(41, 47, 42, 0.82);
+      --preview-bg: linear-gradient(180deg, rgba(37, 42, 38, 0.96), rgba(28, 32, 29, 0.94));
+      --preview-inset: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+      --qr-bg: #ffffff;
+      --code-bg: #20241f;
+      --hairline: rgba(245, 240, 230, 0.14);
+      --hairline-soft: rgba(245, 240, 230, 0.1);
+      --menu-bg: rgba(18, 20, 18, 0.98);
+      --menu-active-bg: rgba(255, 255, 255, 0.14);
+      --menu-active-border: rgba(255, 255, 255, 0.22);
+      --success-bg: rgba(42, 74, 58, 0.86);
+      --success-border: rgba(119, 209, 162, 0.34);
+      --error-bg: rgba(79, 42, 38, 0.9);
+      --error-border: rgba(238, 132, 116, 0.34);
+      --error-text: #ffb4a8;
+      --danger-bg: rgba(79, 42, 38, 0.82);
+      --danger-border: rgba(238, 132, 116, 0.36);
+      --danger-text: #ffb4a8;
+      --warning-bg: rgba(76, 66, 28, 0.82);
+      --warning-border: rgba(231, 196, 95, 0.36);
+      --warning-text: #f3dfa3;
+      --footer-border: rgba(124, 170, 216, 0.24);
+      --footer-bg: linear-gradient(135deg, rgba(73, 111, 143, 0.18), rgba(35, 40, 39, 0.72));
+      --footer-link-bg: rgba(32, 42, 49, 0.9);
+      --footer-link-hover-bg: rgba(42, 53, 60, 0.96);
+      --footer-link-border: rgba(124, 170, 216, 0.26);
+      --footer-link-text: #9cc6f0;
+      --footer-shadow: 0 14px 28px rgba(0, 0, 0, 0.18);
+      --pairing-value: #ffffff;
+      --pairing-placeholder: var(--muted);
+      --body-bg:
+        radial-gradient(circle at top left, rgba(108, 143, 113, 0.22), transparent 34%),
+        linear-gradient(180deg, #1d211e 0%, var(--bg) 100%);
+      --shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+      color-scheme: dark;
     }
 
     * { box-sizing: border-box; }
@@ -34,9 +126,7 @@
       padding: 32px 18px 56px;
       font-family: "Avenir Next", "Segoe UI", sans-serif;
       color: var(--text);
-      background:
-        radial-gradient(circle at top left, rgba(255, 255, 255, 0.75), transparent 38%),
-        linear-gradient(180deg, #f7f3ea 0%, var(--bg) 100%);
+      background: var(--body-bg);
     }
 
     .page {
@@ -60,6 +150,87 @@
 
     .lead span {
       display: block;
+    }
+
+    .page-header {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: start;
+    }
+
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      justify-self: end;
+      position: relative;
+      z-index: 10;
+    }
+
+    .icon-picker {
+      position: relative;
+    }
+
+    .icon-toggle {
+      display: inline-grid;
+      place-items: center;
+      width: 44px;
+      min-height: 44px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: var(--control-bg);
+      color: var(--text);
+      box-shadow: none;
+      font-size: 1.35rem;
+      line-height: 1;
+    }
+
+    .icon-toggle:hover:enabled {
+      box-shadow: 0 10px 20px rgba(31, 106, 83, 0.12);
+    }
+
+    .icon-menu {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      z-index: 5;
+      display: grid;
+      gap: 6px;
+      width: 44px;
+      padding: 6px 5px;
+      border: 1px solid var(--hairline);
+      border-radius: 8px;
+      background: var(--menu-bg);
+      box-shadow: 0 18px 36px rgba(39, 33, 27, 0.16);
+    }
+
+    .icon-menu[hidden] {
+      display: none;
+    }
+
+    .icon-option {
+      display: grid;
+      place-items: center;
+      width: 32px;
+      min-height: 32px;
+      margin: 0;
+      padding: 2px;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      background: transparent;
+      box-shadow: none;
+      font-size: 1.15rem;
+      line-height: 1;
+    }
+
+    .icon-option:hover:enabled,
+    .icon-option.is-active {
+      background: var(--menu-active-bg);
+      border-color: var(--menu-active-border);
+      box-shadow: none;
     }
 
     .box {
@@ -137,27 +308,27 @@
     }
 
     .status-chip.is-success {
-      border-color: rgba(31, 106, 83, 0.26);
-      background: rgba(236, 248, 243, 0.95);
+      border-color: var(--success-border);
+      background: var(--success-bg);
       color: var(--accent-strong);
     }
 
     .status-chip.is-error {
-      border-color: rgba(185, 72, 58, 0.24);
-      background: rgba(255, 240, 238, 0.96);
-      color: #9b3125;
+      border-color: var(--error-border);
+      background: var(--error-bg);
+      color: var(--error-text);
     }
 
     .payload-validity.is-valid {
-      border-color: rgba(31, 106, 83, 0.26);
-      background: rgba(236, 248, 243, 0.95);
+      border-color: var(--success-border);
+      background: var(--success-bg);
       color: var(--accent-strong);
     }
 
     .payload-validity.is-invalid {
-      border-color: rgba(185, 72, 58, 0.24);
-      background: rgba(255, 240, 238, 0.96);
-      color: #9b3125;
+      border-color: var(--error-border);
+      background: var(--error-bg);
+      color: var(--error-text);
     }
 
     .validity-icon {
@@ -171,7 +342,7 @@
       border: 0;
       border-radius: 999px;
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-      color: white;
+      color: var(--qr-bg);
       font-weight: 700;
       font-size: 0.96rem;
       letter-spacing: 0.01em;
@@ -197,7 +368,7 @@
     }
 
     .button-secondary {
-      background: rgba(255, 255, 255, 0.82);
+      background: var(--control-bg);
       color: var(--accent-strong);
       border: 1px solid rgba(31, 106, 83, 0.18);
       box-shadow: none;
@@ -219,7 +390,7 @@
       gap: 10px;
       margin-top: 4px;
       padding: 14px 0 0;
-      border-top: 1px solid rgba(39, 33, 27, 0.08);
+      border-top: 1px solid var(--hairline-soft);
     }
 
     .camera-panel[hidden] {
@@ -230,7 +401,7 @@
       width: 100%;
       aspect-ratio: 4 / 3;
       border-radius: 14px;
-      background: rgba(39, 33, 27, 0.08);
+      background: var(--hairline-soft);
       object-fit: cover;
     }
 
@@ -241,7 +412,7 @@
     }
 
     .camera-status.is-error {
-      color: #9b3125;
+      color: var(--error-text);
     }
 
     .camera-panel-actions {
@@ -265,7 +436,7 @@
       margin: 0 0 14px;
       border: 1px solid var(--border);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.5);
+      background: var(--panel-bg-soft);
     }
 
     .mode-button {
@@ -283,7 +454,7 @@
 
     .mode-button.is-active {
       background: linear-gradient(135deg, var(--accent) 0%, var(--accent-strong) 100%);
-      color: white;
+      color: var(--qr-bg);
       box-shadow: 0 10px 18px rgba(31, 106, 83, 0.16);
     }
 
@@ -293,7 +464,7 @@
       min-height: 70px;
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: #f7f4ee;
+      background: var(--code-bg);
       color: var(--text);
       white-space: pre-wrap;
       word-break: break-word;
@@ -314,7 +485,7 @@
       padding: 10px 12px;
       border: 1px solid var(--border);
       border-radius: 999px;
-      background: rgba(255, 255, 255, 0.55);
+      background: var(--panel-bg);
       color: var(--text);
       font-size: 0.93rem;
     }
@@ -344,7 +515,7 @@
       border: 1px solid rgba(31, 106, 83, 0.2);
       border-radius: 18px;
       background:
-        linear-gradient(135deg, rgba(31, 106, 83, 0.06), rgba(255, 255, 255, 0.7)),
+        linear-gradient(135deg, rgba(31, 106, 83, 0.06), var(--panel-bg-strong)),
         var(--surface-strong);
     }
 
@@ -358,10 +529,15 @@
     }
 
     .pairing-value {
+      color: var(--pairing-value);
       font-size: clamp(1.5rem, 4vw, 2.3rem);
       font-weight: 800;
       letter-spacing: 0.1em;
       font-family: "SFMono-Regular", Consolas, monospace;
+    }
+
+    .pairing-value.is-empty {
+      color: var(--pairing-placeholder);
     }
 
     .details-grid,
@@ -384,8 +560,8 @@
       border: 1px solid rgba(31, 106, 83, 0.18);
       border-radius: 18px;
       background:
-        linear-gradient(135deg, rgba(31, 106, 83, 0.05), rgba(255, 255, 255, 0.82)),
-        rgba(255, 255, 255, 0.72);
+        linear-gradient(135deg, rgba(31, 106, 83, 0.05), var(--control-bg)),
+        var(--control-bg);
       box-shadow: var(--shadow);
     }
 
@@ -393,13 +569,13 @@
       padding: 12px 14px;
       border: 1px solid var(--border);
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.6);
+      background: var(--panel-bg);
     }
 
     .details-links .detail-card {
       background:
         linear-gradient(135deg, rgba(31, 106, 83, 0.05), rgba(255, 255, 255, 0.78)),
-        rgba(255, 255, 255, 0.72);
+        var(--control-bg);
     }
 
     .detail-section-title {
@@ -438,7 +614,7 @@
       padding: 12px 14px;
       border: 1px solid rgba(31, 106, 83, 0.16);
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.48);
+      background: var(--panel-bg-soft);
     }
 
     .lookup-help {
@@ -469,15 +645,15 @@
     }
 
     .lookup-status.is-success {
-      border-color: rgba(31, 106, 83, 0.26);
-      background: rgba(236, 248, 243, 0.95);
+      border-color: var(--success-border);
+      background: var(--success-bg);
       color: var(--accent-strong);
     }
 
     .lookup-status.is-error {
-      border-color: rgba(185, 72, 58, 0.24);
-      background: rgba(255, 240, 238, 0.96);
-      color: #9b3125;
+      border-color: var(--error-border);
+      background: var(--error-bg);
+      color: var(--error-text);
     }
 
     .field-help {
@@ -498,9 +674,9 @@
       display: grid;
       gap: 10px;
       padding: 16px;
-      border: 1px solid rgba(39, 33, 27, 0.12);
+      border: 1px solid var(--hairline);
       border-radius: 18px;
-      background: rgba(255, 255, 255, 0.62);
+      background: var(--panel-bg);
     }
 
     .scan-card h4 {
@@ -600,7 +776,7 @@
       padding: 12px 14px;
       border: 1px solid rgba(31, 106, 83, 0.16);
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.58);
+      background: var(--panel-bg);
       color: var(--muted);
       font-size: 0.9rem;
       line-height: 1.5;
@@ -619,7 +795,7 @@
       padding: 12px 14px;
       border: 1px solid rgba(31, 106, 83, 0.16);
       border-radius: 16px;
-      background: rgba(255, 255, 255, 0.58);
+      background: var(--panel-bg);
     }
 
     .instruction-card h4 {
@@ -634,7 +810,7 @@
       border: 1px solid var(--warning-border);
       border-radius: 16px;
       background: var(--warning-bg);
-      color: #5b4b00;
+      color: var(--warning-text);
       line-height: 1.45;
     }
 
@@ -709,11 +885,10 @@
 
     .preview-surface {
       padding: 18px;
-      border: 1px solid rgba(39, 33, 27, 0.12);
+      border: 1px solid var(--hairline);
       border-radius: 24px;
-      background:
-        linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(249, 245, 238, 0.92));
-      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+      background: var(--preview-bg);
+      box-shadow: var(--preview-inset);
     }
 
     .preview-label {
@@ -737,10 +912,10 @@
       width: 100%;
       max-width: 520px;
       padding: 14px 16px;
-      border: 1px solid rgba(185, 72, 58, 0.24);
+      border: 1px solid var(--error-border);
       border-radius: 14px;
-      background: rgba(255, 240, 238, 0.96);
-      color: #9b3125;
+      background: var(--error-bg);
+      color: var(--error-text);
       font-size: 0.92rem;
       font-weight: 700;
       line-height: 1.45;
@@ -757,9 +932,9 @@
 
     .preview-guidance {
       padding: 18px 20px;
-      border: 1px solid rgba(39, 33, 27, 0.12);
+      border: 1px solid var(--hairline);
       border-radius: 22px;
-      background: rgba(255, 255, 255, 0.7);
+      background: var(--panel-bg-strong);
     }
 
     .preview-guidance h4 {
@@ -776,19 +951,19 @@
       max-width: 520px;
       height: auto;
       margin: 0 auto;
-      border: 1px solid rgba(39, 33, 27, 0.12);
+      border: 1px solid var(--hairline);
       border-radius: 16px;
-      background: white;
+      background: var(--qr-bg);
     }
 
     .footer-link {
       margin-top: 22px;
       padding: 16px 18px;
-      border: 1px solid rgba(72, 118, 185, 0.22);
+      border: 1px solid var(--footer-border);
       border-radius: 20px;
-      background: linear-gradient(135deg, rgba(72, 118, 185, 0.08), rgba(255, 255, 255, 0.72));
+      background: var(--footer-bg);
       color: var(--text);
-      box-shadow: 0 14px 28px rgba(48, 84, 131, 0.08);
+      box-shadow: var(--footer-shadow);
     }
 
     .footer-link h3 {
@@ -819,10 +994,10 @@
       padding: 11px 16px;
       min-height: 48px;
       flex: 0 1 320px;
-      border: 1px solid rgba(72, 118, 185, 0.24);
+      border: 1px solid var(--footer-link-border);
       border-radius: 999px;
-      background: rgba(247, 251, 255, 0.9);
-      color: #2f5d93;
+      background: var(--footer-link-bg);
+      color: var(--footer-link-text);
       font-weight: 700;
       line-height: 1.2;
       text-decoration: none;
@@ -834,7 +1009,7 @@
     .footer-link a:hover {
       transform: translateY(-1px);
       box-shadow: 0 10px 20px rgba(47, 93, 147, 0.12);
-      background: rgba(255, 255, 255, 0.96);
+      background: var(--footer-link-hover-bg);
     }
 
     .support-icon {
@@ -850,9 +1025,40 @@
     }
 
     @media (max-width: 640px) {
-      body { padding: 22px 14px 40px; }
+      body { padding: 20px 14px 40px; }
       .box { padding: 15px; border-radius: 18px; }
       button { width: 100%; }
+      .page-header {
+        display: block;
+        position: relative;
+      }
+      .page-header h1 {
+        padding-right: 82px;
+      }
+      .page-header .lead {
+        margin-bottom: 16px;
+      }
+      .header-controls {
+        position: absolute;
+        top: 0;
+        right: 0;
+        gap: 6px;
+      }
+      .header-controls .icon-toggle {
+        width: 34px;
+        min-height: 34px;
+        font-size: 1rem;
+      }
+      .header-controls .icon-menu {
+        top: calc(100% + 6px);
+        width: 38px;
+        padding: 5px 4px;
+      }
+      .header-controls .icon-option {
+        width: 28px;
+        min-height: 28px;
+        font-size: 1rem;
+      }
       .button-row { display: block; }
       .scan-grid {
         grid-template-columns: 1fr;
@@ -904,99 +1110,124 @@
 </head>
 <body>
 <main class="page">
-  <h1>Matter QR Code Tool</h1>
-  <p class="lead"><span>This tool lets you upload a Matter QR code, decode it, and recover the setup code.</span><span>You can then generate clean SVG or STL files, ready for 3D printing or creating replacement labels.</span></p>
-  <p class="privacy">Everything runs locally in your browser. No sensitive data is sent anywhere.</p>
+  <div class="page-header">
+    <div>
+      <h1 data-i18n="page.title">Matter QR Code Tool</h1>
+      <p class="lead"><span data-i18n="page.lead1">This tool lets you upload a Matter QR code, decode it, and recover the setup code.</span><span data-i18n="page.lead2">You can then generate clean SVG or STL files, ready for 3D printing or creating replacement labels.</span></p>
+    </div>
+    <div class="header-controls">
+      <div class="icon-picker">
+        <button id="themeToggle" class="icon-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Theme" data-i18n-aria-label="theme.label">◐</button>
+        <div id="themeMenu" class="icon-menu" role="listbox" aria-label="Theme" data-i18n-aria-label="theme.label" hidden>
+          <button class="icon-option" type="button" role="option" data-theme-option="auto" aria-selected="false" title="Auto">◐</button>
+          <button class="icon-option" type="button" role="option" data-theme-option="light" aria-selected="false" title="Light">☀</button>
+          <button class="icon-option" type="button" role="option" data-theme-option="dark" aria-selected="false" title="Dark">☾</button>
+        </div>
+      </div>
+      <div class="icon-picker">
+        <button id="languageToggle" class="icon-toggle" type="button" aria-haspopup="listbox" aria-expanded="false" aria-label="Language" data-i18n-aria-label="language.label">🇬🇧</button>
+        <div id="languageMenu" class="icon-menu" role="listbox" aria-label="Language" data-i18n-aria-label="language.label" hidden>
+          <button class="icon-option" type="button" role="option" data-language-option="en" aria-selected="false" title="English">🇬🇧</button>
+          <button class="icon-option" type="button" role="option" data-language-option="nl" aria-selected="false" title="Nederlands">🇳🇱</button>
+          <button class="icon-option" type="button" role="option" data-language-option="es" aria-selected="false" title="Español">🇪🇸</button>
+          <button class="icon-option" type="button" role="option" data-language-option="de" aria-selected="false" title="Deutsch">🇩🇪</button>
+          <button class="icon-option" type="button" role="option" data-language-option="fr" aria-selected="false" title="Français">🇫🇷</button>
+          <button class="icon-option" type="button" role="option" data-language-option="it" aria-selected="false" title="Italiano">🇮🇹</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p class="privacy" data-i18n="privacy.local">Everything runs locally in your browser. No sensitive data is sent anywhere.</p>
 
   <div class="box">
-    <h3>1. Scan Or Upload</h3>
+    <h3 data-i18n="scan.title">1. Scan Or Upload</h3>
     <div class="scan-grid">
       <div class="scan-card">
-        <h4>Live Camera</h4>
-        <p>Point your phone or laptop camera at the Matter QR code for fast scanning.</p>
+        <h4 data-i18n="scan.camera.title">Live Camera</h4>
+        <p data-i18n="scan.camera.help">Point your phone or laptop camera at the Matter QR code for fast scanning.</p>
         <div id="cameraPanel" class="camera-panel" hidden>
           <video id="cameraPreview" class="camera-preview" autoplay playsinline muted></video>
           <div id="cameraStatus" class="camera-status" aria-live="polite"></div>
         </div>
         <div class="button-row">
-          <button id="startCameraBtn" type="button">📷 Start Camera Scan</button>
+          <button id="startCameraBtn" type="button" data-i18n="scan.camera.start">📷 Start Camera Scan</button>
         </div>
       </div>
       <div class="scan-card">
-        <h4>Photo Upload</h4>
-        <p>Choose an existing photo or screenshot if the live scanner is not convenient.</p>
+        <h4 data-i18n="scan.upload.title">Photo Upload</h4>
+        <p data-i18n="scan.upload.help">Choose an existing photo or screenshot if the live scanner is not convenient.</p>
         <div class="upload-row">
           <input type="file" id="file" accept="image/*" />
         </div>
       </div>
     </div>
     <div id="status" class="status-chip" aria-live="polite" hidden></div>
-    <p class="field-help">If automatic decoding still does not work, you can paste the <code>MT:</code> payload directly into the field in step 2.</p>
+    <p class="field-help" data-i18n="scan.fallback">If automatic decoding still does not work, you can paste the <code>MT:</code> payload directly into the field in step 2.</p>
   </div>
 
   <div class="box">
-    <h3>2. Review Payload</h3>
+    <h3 data-i18n="payload.title">2. Review Payload</h3>
     <div class="input-row">
       <input id="data" placeholder="MT:..." size="40"/>
       <div id="payloadValidity" class="payload-validity" aria-live="polite">
         <span class="validity-icon">-</span>
-        <span>Waiting For Input</span>
+        <span data-i18n="payload.waiting">Waiting For Input</span>
       </div>
     </div>
-    <p class="field-help">The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.</p>
+    <p class="field-help" data-i18n="payload.help">The <code>MT:</code> value is the Matter setup payload stored in the QR code. It contains the commissioning data used to pair the device, so it should be treated as sensitive.</p>
     <div class="pairing-card">
-      <div class="pairing-label">Extracted Pairing Code</div>
+      <div class="pairing-label" data-i18n="payload.pairingLabel">Extracted Pairing Code</div>
       <div id="manualDisplay" class="pairing-value">-</div>
     </div>
     <div class="lookup-panel">
       <div class="button-row">
-        <button id="dclLookupBtn" class="button-secondary" type="button" disabled>Request Official Product Info</button>
+        <button id="dclLookupBtn" class="button-secondary" type="button" disabled data-i18n="lookup.request">Request Official Product Info</button>
         <div id="lookupStatus" class="lookup-status" aria-live="polite" hidden></div>
       </div>
-      <p class="lookup-help">Optional: This requests the product records via its product ID.</p>
-      <p class="lookup-help"><strong>No sensitive information is sent.</strong> Only the extracted vendor and product IDs are used for the lookup, not the setup PIN or full <code>MT:</code> payload.</p>
+      <p class="lookup-help" data-i18n="lookup.help">Optional: This requests the product records via its product ID.</p>
+      <p class="lookup-help" data-i18n="lookup.privacy"><strong>No sensitive information is sent.</strong> Only the extracted vendor and product IDs are used for the lookup, not the setup PIN or full <code>MT:</code> payload.</p>
     </div>
     <div id="detailsGrid" class="details-grid"></div>
-    <div class="note">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
+    <div class="note" data-i18n="payload.warning">Warning: do not share the extracted QR contents or pairing code with anyone you do not trust.</div>
   </div>
 
   <div class="box">
-    <h3>3. Export</h3>
-    <div class="mode-switch" role="tablist" aria-label="Export mode">
-      <button id="svgModeBtn" class="mode-button" type="button" role="tab" aria-selected="false" aria-controls="svgExportSection" tabindex="-1">SVG Export</button>
-      <button id="stlModeBtn" class="mode-button is-active" type="button" role="tab" aria-selected="true" aria-controls="stlExportSection" tabindex="0">STL Export</button>
+    <h3 data-i18n="export.title">3. Export</h3>
+    <div class="mode-switch" role="tablist" aria-label="Export mode" data-i18n-aria-label="export.modeLabel">
+      <button id="svgModeBtn" class="mode-button" type="button" role="tab" aria-selected="false" aria-controls="svgExportSection" tabindex="-1" data-i18n="export.svg">SVG Export</button>
+      <button id="stlModeBtn" class="mode-button is-active" type="button" role="tab" aria-selected="true" aria-controls="stlExportSection" tabindex="0" data-i18n="export.stl">STL Export</button>
     </div>
     <div id="svgExportSection" class="export-section" role="tabpanel" aria-labelledby="svgModeBtn" hidden>
       <div class="options">
-        <label><input type="checkbox" id="bambuSafeMode" /> Compatibility mode: no viewport sizing</label>
+        <label><input type="checkbox" id="bambuSafeMode" /> <span data-i18n="export.compatibility">Compatibility mode: no viewport sizing</span></label>
       </div>
     </div>
     <div id="stlExportSection" class="export-section lookup-panel" role="tabpanel" aria-labelledby="stlModeBtn">
-      <h4>STL Settings</h4>
-      <p class="lookup-help">Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.</p>
+      <h4 data-i18n="stl.settings">STL Settings</h4>
+      <p class="lookup-help" data-i18n="stl.help">Use the nozzle and layer settings from your slicer profile here. The tool will size the QR automatically.</p>
       <div class="settings-columns">
         <div class="settings-group">
-          <h4>Your Printer</h4>
+          <h4 data-i18n="stl.printer">Your Printer</h4>
           <div class="print-grid">
             <label>
-              <span class="setting-text">Nozzle Size (mm)</span>
+              <span class="setting-text" data-i18n="stl.nozzle">Nozzle Size (mm)</span>
               <input id="nozzleSize" type="number" min="0.1" step="0.05" value="0.4" />
             </label>
             <label>
-              <span class="setting-text">Layer Height (mm)</span>
+              <span class="setting-text" data-i18n="stl.layer">Layer Height (mm)</span>
               <input id="layerHeight" type="number" min="0.05" step="0.05" value="0.2" />
             </label>
           </div>
         </div>
         <div class="settings-group">
-          <h4>QR Code Output</h4>
+          <h4 data-i18n="stl.output">QR Code Output</h4>
           <div class="print-grid">
             <label>
-              <span class="setting-text">QR Square Width (x nozzle)</span>
+              <span class="setting-text" data-i18n="stl.width">QR Square Width (x nozzle)</span>
               <input id="moduleMultiplier" type="number" min="2" step="1" value="4" />
             </label>
             <label>
-              <span class="setting-text">QR Height (layers)</span>
+              <span class="setting-text" data-i18n="stl.height">QR Height (layers)</span>
               <input id="raisedLayerCount" type="number" min="1" step="1" value="2" />
             </label>
           </div>
@@ -1007,50 +1238,50 @@
   </div>
 
   <div class="box">
-    <h3>4. Preview & Download</h3>
+    <h3 data-i18n="preview.title">4. Preview & Download</h3>
     <div class="lookup-panel preview-card">
       <div class="preview-layout">
         <div class="preview-toolbar">
           <div class="shape-setting">
-            <label for="moduleShape">QR Module Shape</label>
+            <label for="moduleShape" data-i18n="preview.moduleShape">QR Module Shape</label>
             <select id="moduleShape" class="plain-control">
-              <option value="square">Square</option>
-              <option value="round">Round Dots</option>
+              <option value="square" data-i18n="preview.square">Square</option>
+              <option value="round" data-i18n="preview.round">Round Dots</option>
             </select>
           </div>
           <div class="shape-setting">
-            <label for="cornerRadiusPercent">Corner Radius (%)</label>
+            <label for="cornerRadiusPercent" data-i18n="preview.cornerRadius">Corner Radius (%)</label>
             <input id="cornerRadiusPercent" class="plain-control" type="number" min="0" max="100" step="5" value="50" />
           </div>
           <div class="shape-setting">
-            <label for="mirrorOutput">Print Orientation</label>
+            <label for="mirrorOutput" data-i18n="preview.orientation">Print Orientation</label>
             <select id="mirrorOutput" class="plain-control">
-              <option value="normal">Standard</option>
-              <option value="mirrored">Underside / Mirrored</option>
+              <option value="normal" data-i18n="preview.standard">Standard</option>
+              <option value="mirrored" data-i18n="preview.mirrored">Underside / Mirrored</option>
             </select>
           </div>
         </div>
         <div class="preview-pane">
           <div class="preview-surface">
-            <div class="preview-label">Preview</div>
+            <div class="preview-label" data-i18n="preview.label">Preview</div>
             <div id="output"></div>
           </div>
           <div class="preview-actions">
-            <button id="downloadBtn" type="button">Download SVG</button>
-            <button id="downloadStlBtn" class="button-secondary" type="button">Download STL</button>
+            <button id="downloadBtn" type="button" data-i18n="download.svg">Download SVG</button>
+            <button id="downloadStlBtn" class="button-secondary" type="button" data-i18n="download.stl">Download STL</button>
           </div>
         </div>
       </div>
     </div>
     <div class="instruction-card preview-guidance">
-      <h4>Instructions for Bambu Lab / OrcaSlicer</h4>
+      <h4 data-i18n="instructions.title">Instructions for Bambu Lab / OrcaSlicer</h4>
       <ul class="workflow-list">
-        <li>Generate and download the QR file you want to use.</li>
-        <li>Right-click the part you want to modify.</li>
-        <li>Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR SVG or STL.</li>
-        <li>Position the modifier where you want the QR.</li>
-        <li>Change the filament color so it shows up on the finished print.</li>
-        <li>If the final visible QR would end up reversed, enable mirroring before exporting.</li>
+        <li data-i18n="instructions.step1">Generate and download the QR file you want to use.</li>
+        <li data-i18n="instructions.step2">Right-click the part you want to modify.</li>
+        <li data-i18n="instructions.step3">Choose <code>Add modifier</code>, then <code>Load</code>, and select the QR SVG or STL.</li>
+        <li data-i18n="instructions.step4">Position the modifier where you want the QR.</li>
+        <li data-i18n="instructions.step5">Change the filament color so it shows up on the finished print.</li>
+        <li data-i18n="instructions.step6">If the final visible QR would end up reversed, enable mirroring before exporting.</li>
       </ul>
     </div>
   </div>
@@ -1058,25 +1289,25 @@
 
 <div class="page">
   <div class="footer-link">
-    <h3>Support</h3>
-    <p>If this tool helped you rescue a device or saved you some time, you can follow the project or support me here.</p>
+    <h3 data-i18n="support.title">Support</h3>
+    <p data-i18n="support.copy">If this tool helped you rescue a device or saved you some time, you can follow the project or support me here.</p>
     <div class="support-links">
       <a href="https://github.com/chill-uk/matter-qr-app" target="_blank" rel="noreferrer">
         <svg class="support-icon" viewBox="0 0 16 16" aria-hidden="true">
           <path d="M8 0C3.58 0 0 3.67 0 8.2c0 3.62 2.29 6.69 5.47 7.77.4.08.55-.18.55-.39 0-.19-.01-.82-.01-1.49-2.01.38-2.53-.5-2.69-.96-.09-.24-.48-.97-.82-1.16-.28-.16-.68-.55-.01-.56.63-.01 1.08.59 1.23.84.72 1.24 1.87.89 2.33.68.07-.53.28-.89.5-1.09-1.78-.21-3.64-.92-3.64-4.08 0-.9.31-1.64.82-2.22-.08-.21-.36-1.05.08-2.18 0 0 .67-.22 2.2.85a7.35 7.35 0 0 1 4 0c1.53-1.07 2.2-.85 2.2-.85.44 1.13.16 1.97.08 2.18.51.58.82 1.31.82 2.22 0 3.17-1.87 3.87-3.65 4.08.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.19 0 .21.15.47.55.39A8.22 8.22 0 0 0 16 8.2C16 3.67 12.42 0 8 0Z"/>
         </svg>
-        <span class="support-label">GitHub Repo</span>
+        <span class="support-label" data-i18n="support.github">GitHub Repo</span>
       </a>
       <a href="https://ko-fi.com/chill_uk" target="_blank" rel="noreferrer">
         <svg class="support-icon" viewBox="0 0 24 24" aria-hidden="true">
           <path d="M6 5.5A3.5 3.5 0 0 0 2.5 9v1.5A3.5 3.5 0 0 0 6 14h.37a5.76 5.76 0 0 0 11.26 0H18A3.5 3.5 0 0 0 21.5 10.5V9A3.5 3.5 0 0 0 18 5.5H6Zm0 2h12A1.5 1.5 0 0 1 19.5 9v1.5A1.5 1.5 0 0 1 18 12h-.08a5.76 5.76 0 0 0-11.84 0H6A1.5 1.5 0 0 1 4.5 10.5V9A1.5 1.5 0 0 1 6 7.5Zm5.97 2.18a2.35 2.35 0 0 0-1.67.72 2.23 2.23 0 0 0 0 3.2l1.35 1.31a.5.5 0 0 0 .7 0l1.35-1.31a2.23 2.23 0 0 0 0-3.2 2.35 2.35 0 0 0-3.03-.16l-.2.16-.2-.16a2.34 2.34 0 0 0-1.5-.56Z"/>
         </svg>
-        <span class="support-label">Support Me</span>
+        <span class="support-label" data-i18n="support.kofi">Support Me</span>
       </a>
     </div>
   </div>
 </div>
 
-<script type="module" src="app.js?v=20260410-10"></script>
+<script type="module" src="app.js?v=20260416-1"></script>
 </body>
 </html>
