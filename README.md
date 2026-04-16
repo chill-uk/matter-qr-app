@@ -107,6 +107,6 @@ docker run -p 8080:80 ghcr.io/chill-uk/matter-qr-app:latest
 
 ## Support
 
-If this tool saved you some time, you can support it me Ko-fi:
+If this tool saved you some time, you can support me on Ko-fi:
 
 - [ko-fi.com/chill_uk](https://ko-fi.com/chill_uk)

@@ -174,7 +174,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Loaded official vendor info.",
     "lookup.noRecord": "No matching official product record was found.",
     "lookup.unavailable": "Official product lookup is unavailable right now: {message}",
-    "lookup.help": "Optional: This requests the product records via its product ID.",
+    "lookup.help": "Optional: This requests the product records via the extracted vendor and product IDs.",
     "lookup.privacy": "<strong>No sensitive information is sent.</strong> Only the extracted vendor and product IDs are used for the lookup, not the setup PIN or full <code>MT:</code> payload.",
     "export.title": "3. Export",
     "export.modeLabel": "Export mode",
@@ -288,7 +288,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Officiele fabrikantinfo geladen.",
     "lookup.noRecord": "Geen bijpassend officieel productrecord gevonden.",
     "lookup.unavailable": "Officiele productlookup is nu niet beschikbaar: {message}",
-    "lookup.help": "Optioneel: hiermee worden productrecords opgevraagd via de product-ID.",
+    "lookup.help": "Optioneel: hiermee worden productrecords opgevraagd via de uitgelezen fabrikant- en product-ID's.",
     "lookup.privacy": "<strong>Er wordt geen gevoelige informatie verstuurd.</strong> Alleen de uitgelezen fabrikant- en product-ID's worden gebruikt, niet de setup-PIN of volledige <code>MT:</code>-payload.",
     "export.title": "3. Exporteren",
     "export.modeLabel": "Exportmodus",
@@ -402,7 +402,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Información oficial del fabricante cargada.",
     "lookup.noRecord": "No se encontró ningún registro oficial de producto coincidente.",
     "lookup.unavailable": "La búsqueda oficial del producto no está disponible ahora: {message}",
-    "lookup.help": "Opcional: solicita los registros del producto mediante su ID de producto.",
+    "lookup.help": "Opcional: solicita los registros del producto mediante los ID de fabricante y producto extraídos.",
     "lookup.privacy": "<strong>No se envía información sensible.</strong> Solo se usan los ID de fabricante y producto extraídos, no el PIN de configuración ni la carga <code>MT:</code> completa.",
     "export.title": "3. Exportar",
     "export.modeLabel": "Modo de exportación",
@@ -516,7 +516,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Offizielle Herstellerinfos geladen.",
     "lookup.noRecord": "Kein passender offizieller Produkteintrag gefunden.",
     "lookup.unavailable": "Die offizielle Produktsuche ist gerade nicht verfügbar: {message}",
-    "lookup.help": "Optional: Ruft die Produktdatensätze über die Produkt-ID ab.",
+    "lookup.help": "Optional: Ruft die Produktdatensätze über die extrahierten Hersteller- und Produkt-IDs ab.",
     "lookup.privacy": "<strong>Es werden keine sensiblen Informationen gesendet.</strong> Nur die extrahierten Hersteller- und Produkt-IDs werden verwendet, nicht die Setup-PIN oder die vollständige <code>MT:</code>-Payload.",
     "export.title": "3. Exportieren",
     "export.modeLabel": "Exportmodus",
@@ -630,7 +630,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Infos fabricant officielles chargées.",
     "lookup.noRecord": "Aucun enregistrement produit officiel correspondant n'a été trouvé.",
     "lookup.unavailable": "La recherche produit officielle est indisponible pour le moment : {message}",
-    "lookup.help": "Facultatif : cette action demande les enregistrements produit via son ID produit.",
+    "lookup.help": "Facultatif : cette action demande les enregistrements produit via les ID fabricant et produit extraits.",
     "lookup.privacy": "<strong>Aucune information sensible n'est envoyée.</strong> Seuls les ID fabricant et produit extraits sont utilisés, pas le PIN de configuration ni le payload <code>MT:</code> complet.",
     "export.title": "3. Exporter",
     "export.modeLabel": "Mode d'export",
@@ -744,7 +744,7 @@ const TRANSLATIONS = {
     "lookup.loadedVendor": "Informazioni ufficiali sul produttore caricate.",
     "lookup.noRecord": "Nessun record ufficiale del prodotto corrispondente trovato.",
     "lookup.unavailable": "La ricerca ufficiale del prodotto non è disponibile ora: {message}",
-    "lookup.help": "Opzionale: richiede i record del prodotto tramite il suo ID prodotto.",
+    "lookup.help": "Opzionale: richiede i record del prodotto tramite gli ID produttore e prodotto estratti.",
     "lookup.privacy": "<strong>Nessuna informazione sensibile viene inviata.</strong> Vengono usati solo gli ID produttore e prodotto estratti, non il PIN di configurazione o il payload <code>MT:</code> completo.",
     "export.title": "3. Esporta",
     "export.modeLabel": "Modalità di esportazione",
@@ -1182,7 +1182,7 @@ function formatCommissioningFlow(value) {
   if (value === 0) return t("flow.standard");
   if (value === 1) return t("flow.userIntent");
   if (value === 2) return t("flow.custom");
-  return String(value);
+  return t("flow.unknown", { value });
 }
 
 function formatRendezvousInformation(value) {
