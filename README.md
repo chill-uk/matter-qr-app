@@ -6,6 +6,14 @@ Check it out here: [matterqr.codes](https://generate.matterqr.codes)
 
 Or you can grab the docker image and self-host it. (Instructions at the end)
 
+## Latest Updates
+
+- Live camera QR scanning is built in, so you no longer need a third-party QR scanner or photo upload first
+- Photo upload is still available as a fallback
+- Light, dark, and automatic theme modes
+- Browser-language detection and manual language selection
+- Current UI languages: English, Dutch, Spanish, German, French, and Italian
+
 ## Why
 
 I built this tool to help transplant Matter QR codes onto 3D printed models, for example in this [IKEA Bilresa to dual wall switch conversion](https://makerworld.com/en/models/2615078-ikea-bilresa-to-dual-wall-switch-conversion). The QR code is stored on the outer body and, without it, you cannot properly reset and recommission the device, which can make the hardware effectively useless.
@@ -20,6 +28,12 @@ Note: The regenerated QR code will often look different from the original label.
 - Upload a photo of a Matter QR code and decode it in the browser
 - Extract the `MT:` Matter setup payload
 - Derive the manual pairing code
+
+### Interface
+
+- Automatically follows the browser language when supported
+- Manual language selector for English, Dutch, Spanish, German, French, and Italian
+- Light, dark, and automatic theme selector
 
 ### Inspect
 

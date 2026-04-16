@@ -27,6 +27,9 @@ Current behavior:
 - direct `MT:` payload input/editing when scanning fails
 - inline MT payload validity feedback beside the text field
 - automatic manual pairing code extraction
+- light, dark, and automatic theme modes
+- browser-language detection with a manual language selector
+  - supported UI languages are English, Dutch, Spanish, German, French, and Italian
 - parsed Matter details display:
   - setup PIN
   - discriminator
@@ -60,6 +63,7 @@ The current export does not include the Matter logo, rounded frame, or printed p
 Default use is client-side only:
 
 - uploaded images stay in the browser
+- live camera scanning happens in the browser
 - decoded QR contents stay in the browser
 - setup PINs and pairing codes stay in the browser
 
@@ -74,6 +78,7 @@ Optional behavior:
 - plain HTML, CSS, and JavaScript
 - `qrcode` for QR generation
 - `@zxing/browser` for QR decoding
+- browser `localStorage` for language and theme preferences
 - Nginx for static hosting
 - Nginx proxy route for optional DCL lookups
 - Docker for simple deployment
@@ -108,6 +113,7 @@ Optional behavior:
 - the app focuses on QR-only output rather than full branded Matter label recreation
 - the optional DCL lookup depends on the upstream CSA service being available
 - the app is intentionally lightweight and has no persistence layer
+- language and theme preferences are local to the current browser
 - SVG export does not have a physical mm sizing workflow
 - there is still no automated test harness around the Matter parsing and export logic
 - mobile live camera scanning may require `https://` depending on browser security rules, especially on iOS
