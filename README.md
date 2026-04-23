@@ -1,3 +1,7 @@
+[![Docker Image](https://github.com/chill-uk/matter-qr-app/actions/workflows/docker-image.yml/badge.svg)](https://github.com/chill-uk/matter-qr-app/actions/workflows/docker-image.yml)
+![Stars](https://img.shields.io/github/stars/chill-uk/matter-qr-app)
+![Docker](https://img.shields.io/badge/docker-ready-blue)
+
 # Matter QR Tool
 
 A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting an SVG / STL QR label for transplanting onto 3D-printed models.
