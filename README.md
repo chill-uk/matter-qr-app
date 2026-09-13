@@ -6,6 +6,8 @@
 
 A small client-side web app for decoding Matter QR codes, inspecting the extracted onboarding data, and exporting an SVG / STL QR label for transplanting onto 3D-printed models.
 
+The app is self-contained for its core QR functionality: browser dependencies are bundled into the Docker image and served locally, so QR generation and scanning do not require a third-party CDN at runtime.
+
 Check it out here: [matterqr.codes](https://generate.matterqr.codes)
 
 Or you can grab the docker image and self-host it. (Instructions at the end)
@@ -14,6 +16,7 @@ Or you can grab the docker image and self-host it. (Instructions at the end)
 
 - Live camera QR scanning is built in, so you no longer need a third-party QR scanner or photo upload first
 - Photo upload is still available as a fallback
+- Browser dependencies are bundled and served locally instead of being loaded from a third-party CDN
 - Light, dark, and automatic theme modes
 - Browser-language detection and manual language selection
 - Current UI languages: English, Dutch, Spanish, German, French, and Italian
@@ -60,11 +63,12 @@ Note: The regenerated QR code will often look different from the original label.
 
 ## Privacy
 
-Default use is fully client-side:
+Default use is fully client-side and self-contained:
 
 - uploaded images stay in the browser
 - decoded QR contents stay in the browser
 - setup PINs and pairing codes stay in the browser
+- QR scanning and generation use dependencies served locally by the app, with no third-party CDN required at runtime
 
 The only exception is the optional live DCL lookup button. When used, it requests the vendor and product records for the extracted IDs through the app's same-origin proxy to the official CSA DCL service. The full `MT:` payload is not sent during that lookup, though some CSA deployments may require a public vendor-directory fallback for vendor enrichment.
 
