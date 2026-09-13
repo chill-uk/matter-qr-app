@@ -1,12 +1,3 @@
 .DS_Store
 node_modules/
 web/vendor/
-/scripts/*
-.env
-.env.bak
-.venv/
-__pycache__/
-*.py[cod]
-*.egg-info/
-.pytest_cache/
-.unifi-dns4me-state.json
