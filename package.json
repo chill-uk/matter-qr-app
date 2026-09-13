@@ -1,0 +1,14 @@
+{
+  "name": "matter-qr-app-web-dependencies",
+  "private": true,
+  "scripts": {
+    "build:vendor": "node scripts/build-vendor.mjs"
+  },
+  "dependencies": {
+    "@zxing/browser": "0.1.5",
+    "qrcode": "1.5.4"
+  },
+  "devDependencies": {
+    "esbuild": "0.25.10"
+  }
+}

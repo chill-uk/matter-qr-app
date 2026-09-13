@@ -1,7 +1,7 @@
-import QRCode from "https://cdn.jsdelivr.net/npm/qrcode@1.5.4/+esm";
+import QRCode from "./vendor/qrcode.js";
 import {
   BrowserMultiFormatReader
-} from "https://cdn.jsdelivr.net/npm/@zxing/browser@0.1.5/+esm";
+} from "./vendor/zxing-browser.js";
 
 const imageReader = new BrowserMultiFormatReader();
 const cameraReader = new BrowserMultiFormatReader();
