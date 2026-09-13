@@ -1,0 +1,65 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  container-smoke-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Build Docker image
+        run: docker build --tag matter-qr-app:ci .
+
+      - name: Verify served browser dependencies
+        shell: bash
+        run: |
+          docker run --rm --detach \
+            --name matter-qr-app-ci \
+            --publish 127.0.0.1:8080:80 \
+            matter-qr-app:ci
+
+          trap 'docker stop matter-qr-app-ci >/dev/null 2>&1 || true' EXIT
+
+          for attempt in {1..10}; do
+            if curl --fail --silent http://127.0.0.1:8080/app.js >/dev/null; then
+              break
+            fi
+            sleep 1
+          done
+
+          app_js="$(curl --fail --silent --show-error http://127.0.0.1:8080/app.js)"
+          grep --fixed-strings 'import QRCode from "./vendor/qrcode.js";' <<<"${app_js}"
+          grep --fixed-strings 'from "./vendor/zxing-browser.js";' <<<"${app_js}"
+
+          curl --fail --silent --show-error \
+            --output /dev/null \
+            http://127.0.0.1:8080/vendor/qrcode.js
+          curl --fail --silent --show-error \
+            --output /dev/null \
+            http://127.0.0.1:8080/vendor/zxing-browser.js
+
+          scan_status=0
+          docker exec matter-qr-app-ci \
+            grep -Rni jsdelivr /usr/share/nginx/html || scan_status=$?
+
+          if [[ "${scan_status}" -eq 0 ]]; then
+            echo "Found an unexpected jsDelivr reference in the served application."
+            exit 1
+          elif [[ "${scan_status}" -ne 1 ]]; then
+            echo "Failed to scan the served application for jsDelivr references."
+            exit "${scan_status}"
+          fi
