@@ -1,4 +1,3 @@
-const DCL_ORIGIN = "https://on.dcl.csa-iot.org";
 const DCL_PREFIX = "/api/dcl";
 
 export default {

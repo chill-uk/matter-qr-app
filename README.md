@@ -106,9 +106,10 @@ npm install
 npm run dev:cloudflare
 ```
 
-To deploy manually, authenticate Wrangler with your Cloudflare account and run:
+To deploy manually, authenticate Wrangler with your Cloudflare account, then deploy:
 
 ```bash
+npx wrangler@4 login
 npm run deploy:cloudflare
 ```
 
