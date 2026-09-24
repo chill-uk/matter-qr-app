@@ -2,7 +2,10 @@
   "name": "matter-qr-app-web-dependencies",
   "private": true,
   "scripts": {
-    "build:vendor": "node scripts/build-vendor.mjs"
+    "build:vendor": "node scripts/build-vendor.mjs",
+    "build": "npm run build:vendor",
+    "dev:cloudflare": "npm run build && npx wrangler@4 dev",
+    "deploy:cloudflare": "npm run build && npx wrangler@4 deploy"
   },
   "dependencies": {
     "@zxing/browser": "0.1.5",

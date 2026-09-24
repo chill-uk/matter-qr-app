@@ -78,6 +78,8 @@ The only exception is the optional live DCL lookup button. When used, it request
 .
 ├── Dockerfile
 ├── README.md
+├── cloudflare/
+│   └── worker.js
 ├── docker/
 │   └── nginx.conf
 ├── docs/
@@ -92,6 +94,28 @@ The only exception is the optional live DCL lookup button. When used, it request
 - `web/` contains the static browser app
 - `docker/nginx.conf` serves the site and proxies `/api/dcl/` to the official CSA DCL observer node
 - `docs/context.md` keeps the project notes and current scope
+
+## Cloudflare Workers Deployment
+
+The hosted site can run on Cloudflare Workers with Static Assets. The same `web/` frontend is used by both Cloudflare and Docker, and the Worker proxies only the optional CSA DCL requests at `/api/dcl/`. QR scanning, decoding, generation, and exports remain in the browser.
+
+To develop locally with Wrangler:
+
+```bash
+npm install
+npm run dev:cloudflare
+```
+
+To deploy manually, authenticate Wrangler with your Cloudflare account, then deploy:
+
+```bash
+npx wrangler@4 login
+npm run deploy:cloudflare
+```
+
+For automatic deployment, add the GitHub Actions repository secrets `CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`. The Cloudflare workflow deploys `main` and can also be run manually from the Actions tab.
+
+The Docker image and GHCR publishing workflow remain available for self-hosting, including offline use of the core QR features.
 
 ## Running With Docker
 
