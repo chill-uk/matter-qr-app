@@ -63,3 +63,23 @@ jobs:
             echo "Failed to scan the served application for jsDelivr references."
             exit "${scan_status}"
           fi
+
+  cloudflare-worker-check:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Build browser dependencies
+        run: |
+          npm install --no-audit --no-fund
+          npm run build:vendor
+
+      - name: Validate Cloudflare Worker bundle
+        run: npx --yes wrangler@4 deploy --dry-run
