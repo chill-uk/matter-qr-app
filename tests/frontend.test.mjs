@@ -18,7 +18,7 @@ test("every supported language has the same translation keys", () => {
 });
 
 test("translated interpolation parameters match English", () => {
-  const parameters = (value) => [...value.matchAll(/\\{([a-zA-Z][a-zA-Z0-9]*)\\}/g)]
+  const parameters = (value) => [...value.matchAll(/\{([a-zA-Z][a-zA-Z0-9]*)\}/g)]
     .map((match) => match[1]).sort();
   for (const [language, entries] of Object.entries(TRANSLATIONS)) {
     for (const [key, value] of Object.entries(entries)) {
@@ -30,10 +30,10 @@ test("translated interpolation parameters match English", () => {
 test("HTML refers to extracted assets", () => {
   const html = read("../web/index.html");
   const app = read("../web/app.js");
-  assert.match(html, /href="styles\\/app\\.css"/);
-  assert.match(html, /src="app\\.js\\?v=[^"]+"/);
-  assert.match(app, /import \\{ TRANSLATIONS \\} from "\\.\\/i18n\\/translations\\.js"/);
-  assert.doesNotMatch(html, /<style[\\s>]/i);
+  assert.match(html, /href="styles\/app\.css"/);
+  assert.match(html, /src="app\.js\?v=[^"]+"/);
+  assert.match(app, /import \{ TRANSLATIONS \} from "\.\/i18n\/translations\.js"/);
+  assert.doesNotMatch(html, /<style[\s>]/i);
 });
 
 test("primary UI labels exist in all languages", () => {
