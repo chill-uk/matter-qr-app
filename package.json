@@ -5,7 +5,8 @@
     "build:vendor": "node scripts/build-vendor.mjs",
     "build": "npm run build:vendor",
     "dev:cloudflare": "npm run build && npx wrangler@4 dev",
-    "deploy:cloudflare": "npm run build && npx wrangler@4 deploy"
+    "deploy:cloudflare": "npm run build && npx wrangler@4 deploy",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@zxing/browser": "0.1.5",
