@@ -72,6 +72,10 @@ Default use is fully client-side and self-contained:
 
 The only exception is the optional live DCL lookup button. When used, it requests the vendor and product records for the extracted IDs through the app's same-origin proxy to the official CSA DCL service. The full `MT:` payload is not sent during that lookup, though some CSA deployments may require a public vendor-directory fallback for vendor enrichment.
 
+## Development and readability
+
+See [the frontend development guide](docs/development.md) for the source layout, terminology guidelines, and recommended regression tests.
+
 ## Repo Structure
 
 ```text
@@ -83,10 +87,15 @@ The only exception is the optional live DCL lookup button. When used, it request
 ├── docker/
 │   └── nginx.conf
 ├── docs/
-│   └── context.md
+│   ├── context.md
+│   └── development.md
 └── web/
     ├── app.js
-    └── index.html
+    ├── index.html
+    ├── i18n/
+    │   └── translations.js
+    └── styles/
+        └── app.css
 ```
 
 ## Local Structure Notes

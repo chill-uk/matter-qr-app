@@ -9,6 +9,7 @@
     "run_worker_first": ["/api/dcl/*"],
     "not_found_handling": "404-page"
   },
+  "previews": {},
   "observability": {
     "logs": {
       "enabled": true,
