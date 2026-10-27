@@ -9,10 +9,10 @@
     "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
-    "@zxing/browser": "0.1.5",
+    "@zxing/browser": "0.2.1",
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "esbuild": "0.25.10"
+    "esbuild": "0.28.2"
   }
 }
